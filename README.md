@@ -24,10 +24,11 @@ It's designed for building focused, fast REST APIs where you know exactly what's
 | Middlewares                   | ✅ Supported |
 | Input Validation              | ✅ Supported (Partially) |
 | CORS Configuration            | 🔧 Coming soon |
-| Date Input Validation         | 🔧 Coming soon |
-| Built-in Auth Handling (JWT)  | 🔧 Coming soon |
 | Rate Limiting                 | 🔧 Coming soon |
 | Logging                       | 🔧 Coming soon |
+| Date Input Validation         | 🔧 Coming soon |
+| Built-in Uploads Handling     | 🔧 Coming soon |
+| Built-in Auth Handling (JWT)  | 🔧 Coming soon |
 
 ---
 
