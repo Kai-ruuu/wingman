@@ -1,0 +1,13 @@
+<?php
+
+require __DIR__ . '/vendor/autoload.php';
+
+use Wingman\Core\CLI\Colorizer;
+use Wingman\Core\CLI\CommandHandler;
+
+// global error handling
+try {
+    CommandHandler::handle($argv);
+} catch (\Throwable $e) {
+    die(Colorizer::red("Fatal Error: " . $e->getMessage()) . Colorizer::reset(PHP_EOL));
+}

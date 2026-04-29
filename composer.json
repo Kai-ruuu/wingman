@@ -1,0 +1,16 @@
+{
+    "name": "kyle_advincula/wingman",
+    "description": "A PHP backend framework built for rapid api development.",
+    "autoload": {
+        "psr-4": {
+            "Wingman\\": "App/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Kai-ruuu",
+            "email": "kdadvincul2004@gmail.com"
+        }
+    ],
+    "require": {}
+}
