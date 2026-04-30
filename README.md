@@ -63,11 +63,24 @@ This copies all Wingman project essentials into the current directory. The comma
 
 ### wing.exe Commands
 
-| Command       | Description |
-| ------------- | ----------- |
-| `wing new`    | Scaffolds a new Wingman project into the current (empty) directory |
-| `wing build`  | Bundles the project into `Builds/build-<timestamp>/`, excluding files listed in `.wingignore` |
-| `wing clean`  | Wipes the current directory so it can be reused as a fresh Wingman project |
+| Command            | Description |
+| ------------------ | ----------- |
+| `wing new`         | Scaffolds a new Wingman project into the current (empty) directory |
+| `wing new --clean` | Same as `wing new`, but strips all comments from PHP files for a minimal starting point |
+| `wing build`       | Bundles the project into `Builds/build-<timestamp>/`, excluding files listed in `.wingignore` |
+| `wing clean`       | Wipes the current directory so it can be reused as a fresh Wingman project |
+
+---
+
+### wing new --clean
+
+Scaffolds a new project with all comments stripped from PHP source files. This is useful if you are already familiar with the framework and prefer a cleaner starting point without inline documentation.
+
+```bash
+wing new --clean
+```
+
+> **Note:** Comments are only stripped from your application's PHP files. Files inside the `vendor/` directory are always copied as-is to avoid breaking third-party dependencies.
 
 ---
 
@@ -99,7 +112,10 @@ Logs/*
 Wipes all files and folders in the current directory, resetting it so you can run `wing new` again.
 
 You'll be prompted to confirm before anything is deleted:
+
+```
 Delete all files in the current directory? [yes]
+```
 
 Enter anything other than `n` or `no` to proceed.
 

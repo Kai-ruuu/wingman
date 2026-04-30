@@ -4,7 +4,6 @@ namespace Wingman\Core\App;
 
 use mysqli;
 use Wingman\Core\App\DatabaseConfig;
-use Wingman\Core\CLI\Colorizer;
 
 /**
  * Database

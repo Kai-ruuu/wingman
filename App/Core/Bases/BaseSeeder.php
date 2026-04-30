@@ -5,7 +5,6 @@ namespace Wingman\Core\Bases;
 use Exception;
 use mysqli;
 use Wingman\Core\App\Logger;
-use Wingman\Core\CLI\Colorizer;
 
 /**
  * BaseSeeder
