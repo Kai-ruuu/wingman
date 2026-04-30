@@ -64,7 +64,8 @@ class CorsHandler
      */
     public function withAllowedOrigins(array $allowedOrigins): self
     {
-        return new self($allowedOrigins, $this->allowedMethods, $this->allowedHeaders);
+        $this->allowedOrigins = $allowedOrigins;
+        return $this;
     }
 
     /**
@@ -76,7 +77,8 @@ class CorsHandler
      */
     public function withAllowedMethods(array $allowedMethods): self
     {
-        return new self($this->allowedOrigins, $allowedMethods, $this->allowedHeaders);
+        $this->allowedMethods = $allowedMethods;
+        return $this;
     }
 
     /**
@@ -87,7 +89,8 @@ class CorsHandler
      */
     public function withAllowedHeaders(array $allowedHeaders): self
     {
-        return new self($this->allowedOrigins, $this->allowedMethods, $allowedHeaders);
+        $this->allowedHeaders = $allowedHeaders;
+        return $this;
     }
 
     /**
@@ -102,9 +105,8 @@ class CorsHandler
      */
     public function withAllowedCredentials(): self
     {
-        $instance = new self($this->allowedOrigins, $this->allowedMethods, $this->allowedHeaders);
-        $instance->allowCredentials = true;
-        return $instance;
+        $this->allowCredentials = true;
+        return $this;
     }
 
     /**
@@ -118,9 +120,8 @@ class CorsHandler
      */
     public function withCachePreflight(int $cachePreflight): self
     {
-        $instance = new self($this->allowedOrigins, $this->allowedMethods, $this->allowedHeaders);
-        $instance->cachePreflight = $cachePreflight;
-        return $instance;
+        $this->cachePreflight = $cachePreflight;
+        return $this;
     }
 
     /**
