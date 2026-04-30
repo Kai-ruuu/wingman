@@ -1,5 +1,6 @@
 <?php
 
+use Wingman\Config\Globals;
 use Wingman\Core\App\App;
 use Wingman\Core\App\CorsHandler;
 use Wingman\Core\App\Database;
@@ -7,6 +8,8 @@ use Wingman\Core\App\DatabaseConfig;
 use Wingman\Core\App\Env;
 
 require __DIR__ . '/../vendor/autoload.php';
+
+date_default_timezone_set(Globals::$timezone);
 
 /**
  * =========================================================================

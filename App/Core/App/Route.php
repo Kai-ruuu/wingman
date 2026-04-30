@@ -83,7 +83,7 @@ class Route
         return $this;
     }
 
-    public function withLimitation(int $maxRequests, int $perSeconds): self
+    public function withLimit(int $maxRequests, int $perSeconds): self
     {
         $this->limiter = new RateLimiter($maxRequests, $perSeconds);
         return $this;

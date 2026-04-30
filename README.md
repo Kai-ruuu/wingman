@@ -185,14 +185,14 @@ $this->get('/', PostController::class, 'index')
 
 Limit the number of requests a client can make to a route within a given time window. Rate limiting is based on the client's IP address and uses file-based storage — no additional dependencies required.
 
-Apply a limit to a single route using `withLimitation(maxRequests, perSeconds)`:
+Apply a limit to a single route using `withLimit(maxRequests, perSeconds)`:
 
 ```php
 $this->post('/login', AuthController::class, 'login')
-    ->withLimitation(5, 60); // 5 requests per minute
+    ->withLimit(5, 60); // 5 requests per minute
 ```
 
-Apply a limit to all routes defined in the router using `withLimitationToAll(maxRequests, perSeconds)`:
+Apply a limit to all routes defined in the router using `withLimitToAll(maxRequests, perSeconds)`:
 
 ```php
 class SampleRouter extends BaseRouter
@@ -208,7 +208,7 @@ class SampleRouter extends BaseRouter
 
         $this->get('/{id}', SampleController::class, 'showById')
             // Apply a limit of 60 requests per minute to this specific route
-            ->withLimitation(60, 60);
+            ->withLimit(60, 60);
 
         /**
          * Apply a limit of 60 requests per minute to all routes defined above
@@ -216,7 +216,7 @@ class SampleRouter extends BaseRouter
          * NOTE: Do not use this if you have already applied rate limiting to any
          * specific routes above, as it will overwrite those individual limits.
          */
-        $this->withLimitationToAll(60, 60);
+        $this->withLimitToAll(60, 60);
     }
 }
 ```

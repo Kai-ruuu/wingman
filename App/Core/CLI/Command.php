@@ -2,31 +2,13 @@
 
 namespace Wingman\Core\CLI;
 
+use Wingman\Config\Globals;
 use Wingman\Config\Models;
 use Wingman\Config\Seeders;
 use Wingman\Core\App\Database;
 use Wingman\Core\App\DatabaseConfig;
 use Wingman\Core\App\Logger;
 
-/**
- * Path constants for app directories — used by make-* commands
- * to determine where to write newly scaffolded files.
- */
-define('APP_CONTROLLERS_DIR', __DIR__ . '/../../Controllers');
-define('APP_MIDDLEWARES_DIR', __DIR__ . '/../../Middlewares');
-define('APP_ROUTERS_DIR',     __DIR__ . '/../../Routers');
-define('APP_MODELS_DIR',      __DIR__ . '/../../Models');
-define('APP_SEEDERS_DIR',     __DIR__ . '/../../Seeders');
-
-/**
- * Path constants for kit (sample/template) files — used by make-* commands
- * as the source templates when scaffolding new files.
- */
-define('KIT_CONTROLLER_PATH', __DIR__ . '/../App/Kit/SampleController.php');
-define('KIT_MIDDLEWARE_PATH', __DIR__ . '/../App/Kit/SampleMiddleware.php');
-define('KIT_ROUTER_PATH',     __DIR__ . '/../App/Kit/SampleRouter.php');
-define('KIT_MODEL_PATH',      __DIR__ . '/../App/Kit/SampleModel.php');
-define('KIT_SEEDER_PATH',     __DIR__ . '/../App/Kit/SampleSeeder.php');
 
 /**
  * Command
@@ -255,14 +237,14 @@ class Command
             die;
         }
 
-        if (!is_dir(APP_MODELS_DIR))
-            mkdir(APP_MODELS_DIR, 0777, true);
+        if (!is_dir(Globals::getDir('APP_MODELS')))
+            mkdir(Globals::getDir('APP_MODELS'), 0777, true);
         
         $name     = !str_ends_with($name, 'Model') ? $name . 'Model' : $name;
-        $content  = file_get_contents(KIT_MODEL_PATH);
+        $content  = file_get_contents(Globals::getPath('KIT_MODEL'));
         $content  = str_replace('SampleModel', $name, $content);
         $fileName = $name . '.php';
-        $path     = APP_MODELS_DIR . '/' . $fileName;
+        $path     = Globals::getDir('APP_MODELS') . '/' . $fileName;
 
         if (file_exists($path))
         {
@@ -294,14 +276,14 @@ class Command
             die;
         }
         
-        if (!is_dir(APP_SEEDERS_DIR))
-            mkdir(APP_SEEDERS_DIR, 0777, true);
+        if (!is_dir(Globals::getDir('APP_SEEDERS')))
+            mkdir(Globals::getDir('APP_SEEDERS'), 0777, true);
 
         $name     = !str_ends_with($name, 'Seeder') ? $name . 'Seeder' : $name;
-        $content  = file_get_contents(KIT_SEEDER_PATH);
+        $content  = file_get_contents(Globals::getPath('KIT_SEEDER'));
         $content  = str_replace('SampleSeeder', $name, $content);
         $fileName = $name . '.php';
-        $path     = APP_SEEDERS_DIR . '/' . $fileName;
+        $path     = Globals::getDir('APP_SEEDERS') . '/' . $fileName;
 
         if (file_exists($path))
         {
@@ -333,14 +315,14 @@ class Command
             die;
         }
 
-        if (!is_dir(APP_CONTROLLERS_DIR))
-            mkdir(APP_CONTROLLERS_DIR, 0777, true);
+        if (!is_dir(Globals::getDir('APP_CONTROLLERS')))
+            mkdir(Globals::getDir('APP_CONTROLLERS'), 0777, true);
 
         $name     = !str_ends_with($name, 'Controller') ? $name . 'Controller' : $name;
-        $content  = file_get_contents(KIT_CONTROLLER_PATH);
+        $content  = file_get_contents(Globals::getPath('KIT_CONTROLLER'));
         $content  = str_replace('SampleController', $name, $content);
         $fileName = $name . '.php';
-        $path     = APP_CONTROLLERS_DIR . '/' . $fileName;
+        $path     = Globals::getDir('APP_CONTROLLERS') . '/' . $fileName;
 
         if (file_exists($path))
         {
@@ -372,14 +354,14 @@ class Command
             die;
         }
 
-        if (!is_dir(APP_MIDDLEWARES_DIR))
-            mkdir(APP_MIDDLEWARES_DIR, 0777, true);
+        if (!is_dir(Globals::getDir('APP_MIDDLEWARES')))
+            mkdir(Globals::getDir('APP_MIDDLEWARES'), 0777, true);
 
         $name     = !str_ends_with($name, 'Middleware') ? $name . 'Middleware' : $name;
-        $content  = file_get_contents(KIT_MIDDLEWARE_PATH);
+        $content  = file_get_contents(Globals::getPath('KIT_MIDDLEWARE'));
         $content  = str_replace('SampleMiddleware', $name, $content);
         $fileName = $name . '.php';
-        $path     = APP_MIDDLEWARES_DIR . '/' . $fileName;
+        $path     = Globals::getDir('APP_MIDDLEWARES') . '/' . $fileName;
 
         if (file_exists($path))
         {
@@ -411,14 +393,14 @@ class Command
             die;
         }
 
-        if (!is_dir(APP_ROUTERS_DIR))
-            mkdir(APP_ROUTERS_DIR, 0777, true);
+        if (!is_dir(Globals::getDir('APP_ROUTERS')))
+            mkdir(Globals::getDir('APP_ROUTERS'), 0777, true);
 
         $name     = !str_ends_with($name, 'Router') ? $name . 'Router' : $name;
-        $content  = file_get_contents(KIT_ROUTER_PATH);
+        $content  = file_get_contents(Globals::getPath('KIT_ROUTER'));
         $content  = str_replace('SampleRouter', $name, $content);
         $fileName = $name . '.php';
-        $path     = APP_ROUTERS_DIR . '/' . $fileName;
+        $path     = Globals::getDir('APP_ROUTERS') . '/' . $fileName;
 
         if (file_exists($path))
         {

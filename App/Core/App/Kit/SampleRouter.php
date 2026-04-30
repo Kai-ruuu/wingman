@@ -19,7 +19,7 @@ class SampleRouter extends BaseRouter
 
         $this->get('/{id}', SampleController::class, 'showById')
             // Apply a limit of 60 requests per minute to this specific route
-            ->withLimitation(60, 60);
+            ->withLimit(60, 60);
 
         /**
          * Apply a limit of 60 requests per minute to all routes defined above
@@ -27,6 +27,6 @@ class SampleRouter extends BaseRouter
          * NOTE: Do not use this if you have already applied rate limiting to any
          * specific routes above, as it will overwrite those individual limits.
          */
-        $this->withLimitationToAll(60, 60);
+        $this->withLimitToAll(60, 60);
     }
 }

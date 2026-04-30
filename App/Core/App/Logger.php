@@ -2,22 +2,21 @@
 
 namespace Wingman\Core\App;
 
+use Wingman\Config\Globals;
 use Wingman\Core\CLI\Colorizer;
-
-define('LOGS_DIR', __DIR__ . '/../../../Logs');
 
 class Logger
 {
     private static function save(string $level, string $message): void
     {
-        if (!is_dir(LOGS_DIR))
-            mkdir(LOGS_DIR, 0777, true);
+        if (!is_dir(Globals::getDir('LOGS')))
+            mkdir(Globals::getDir('LOGS'), 0777, true);
         
         $date = date("Y-m-d");
         $time = date("H:i:s");
 
         $logFileName = "log-{$date}.log";
-        $logFilePath = LOGS_DIR . "/{$logFileName}";
+        $logFilePath = Globals::getDir('LOGS') . "/{$logFileName}";
 
         $formatted = str_pad("[{$time}] {$level}", 24) . $message . PHP_EOL;
 
@@ -26,6 +25,7 @@ class Logger
     
     public static function info(string $message): void
     {
+        date_default_timezone_set(Globals::$timezone);
         $time = date("H:i:s");
         $level = '[INFO]';
         self::save($level, $message);
@@ -34,6 +34,7 @@ class Logger
     
     public static function success(string $message): void
     {
+        date_default_timezone_set(Globals::$timezone);
         $time = date("H:i:s");
         $level = '[SUCCESS]';
         self::save($level, $message);
@@ -42,6 +43,7 @@ class Logger
 
     public static function warning(string $message): void
     {
+        date_default_timezone_set(Globals::$timezone);
         $time = date("H:i:s");
         $level = '[WARNING]';
         self::save($level, $message);
@@ -50,6 +52,7 @@ class Logger
 
     public static function error(string $message): void
     {
+        date_default_timezone_set(Globals::$timezone);
         $time = date("H:i:s");
         $level = '[ERROR]';
         self::save($level, $message);
@@ -58,6 +61,7 @@ class Logger
         
     public static function debug(string $message): void
     {
+        date_default_timezone_set(Globals::$timezone);
         $time = date("H:i:s");
         $level = '[DEBUG]';
         self::save($level, $message);

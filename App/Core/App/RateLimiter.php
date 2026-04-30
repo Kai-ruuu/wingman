@@ -2,15 +2,15 @@
 
 namespace Wingman\Core\App;
 
-define('RATE_LIMITS_DIR', __DIR__ . '/../../../tmp/rate_limits');
+use Wingman\Config\Globals;
 
 class RateLimiter {
     public function __construct(
         private int $maxRequests = 60,
         private int $windowSeconds = 60
     ) {
-        if (!is_dir(RATE_LIMITS_DIR))
-            mkdir(RATE_LIMITS_DIR, 0755, true);
+        if (!is_dir(Globals::getDir('RATE_LIMITS')))
+            mkdir(Globals::getDir('RATE_LIMITS'), 0755, true);
     }
 
     private function getClientIp(): string
@@ -23,7 +23,7 @@ class RateLimiter {
 
     public function isAllowed(): bool {
         $identifier = $this->getClientIp();
-        $file = RATE_LIMITS_DIR . '/' . md5($identifier) . '.json';
+        $file = Globals::getDir('RATE_LIMITS') . '/' . md5($identifier) . '.json';
         $now = time();
         $data = ['count' => 0, 'reset_at' => $now + $this->windowSeconds];
 

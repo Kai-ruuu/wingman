@@ -56,13 +56,13 @@ class BaseRouter
         return $this->addRoute(HttpMethod::PATCH, $path, $controller, $method);
     }
 
-    protected function withLimitationToAll(int $maxRequests, int $perSeconds): void
+    protected function withLimitToAll(int $maxRequests, int $perSeconds): void
     {
         foreach ($this->routes as $method => $routes)
         {
             foreach ($routes as $index => $_route)
             {
-                $this->routes[$method][$index]->withLimitation($maxRequests, $perSeconds);
+                $this->routes[$method][$index]->withLimit($maxRequests, $perSeconds);
             }
         }
     }
