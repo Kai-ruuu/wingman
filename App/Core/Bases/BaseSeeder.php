@@ -4,6 +4,7 @@ namespace Wingman\Core\Bases;
 
 use Exception;
 use mysqli;
+use Wingman\Core\App\Logger;
 use Wingman\Core\CLI\Colorizer;
 
 /**
@@ -109,9 +110,9 @@ class BaseSeeder
                 $model->insert($seed);
             }
 
-            echo Colorizer::green("All seeds for model table '{$model->table}' has been seeded.") . Colorizer::reset(PHP_EOL);
+            Logger::success("All seeds for model table '{$model->table}' has been seeded.");
         } catch (Exception $e) {
-            echo Colorizer::red('Failed to seed all seeds - ' . $e->getMessage()) . Colorizer::reset(PHP_EOL);
+            Logger::error('Failed to seed all seeds - ' . $e->getMessage());
         }
     }
 }

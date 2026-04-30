@@ -46,7 +46,10 @@ class Database
 
         // Bail early if the connection could not be established
         if ($connection->connect_error)
-            die(Colorizer::red("Error: Failed to connect to the database.") . Colorizer::reset(PHP_EOL));
+        {
+            Logger::error("Failed to connect to the database - {$connection->connect_error}");
+            die;
+        }
 
         return $connection;
     }

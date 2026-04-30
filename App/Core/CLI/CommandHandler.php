@@ -2,6 +2,8 @@
 
 namespace Wingman\Core\CLI;
 
+use Wingman\Core\App\Logger;
+
 /**
  * CommandHandler
  *
@@ -55,7 +57,10 @@ class CommandHandler extends Command
                     !array_key_exists($flagPair, self::$commands[$command]['flags']) ||
                     !self::$commands[$command]['flags'][$flagPair]['no-val']
                 )
-                    die(Colorizer::red("Error: Invalid flag format in \"{$flagPair}\". Use --flag=value") . Colorizer::reset(PHP_EOL));
+                {
+                    Logger::error("Invalid flag format in \"{$flagPair}\". Use --flag=value");
+                    die;
+                }
 
                 $noValue = true;
             }
@@ -66,13 +71,19 @@ class CommandHandler extends Command
 
                 // Reject flags with missing or empty values (e.g. --host=)
                 if (count($pair) <= 1 || empty($pair[1]))
-                    die(Colorizer::red("Error: Incomplete flag \"{$flagPair}\"") . Colorizer::reset(PHP_EOL));
+                {
+                    Logger::error("Incomplete flag \"{$flagPair}\"");
+                    die;
+                }
 
                 [$flag, $value] = $pair;
 
                 // Reject flags not registered in the command manifest
                 if (!array_key_exists($flag, self::$commands[$command]['flags']))
-                    die(Colorizer::red("Error: Unrecognized flag \"{$flag}\" for command \"{$command}\"") . Colorizer::reset(PHP_EOL));
+                {
+                    Logger::error("Unrecognized flag \"{$flag}\" for command \"{$command}\"");
+                    die;
+                }
 
                 $flags[$flag] = $value;
             }
@@ -118,7 +129,10 @@ class CommandHandler extends Command
 
         // Reject unrecognized commands
         if (!array_key_exists($command, self::$commands))
-            die(Colorizer::red("Error: Unrecognized command \"{$command}\"") . Colorizer::reset(PHP_EOL));
+        {
+            Logger::error("Unrecognized command \"{$command}\"");
+            die;
+        }
 
         // Parse and validate flags from remaining args
         $flags = self::parseFlags($command, $args);

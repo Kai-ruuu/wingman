@@ -6,16 +6,17 @@ use Wingman\Config\Models;
 use Wingman\Config\Seeders;
 use Wingman\Core\App\Database;
 use Wingman\Core\App\DatabaseConfig;
+use Wingman\Core\App\Logger;
 
 /**
  * Path constants for app directories — used by make-* commands
  * to determine where to write newly scaffolded files.
  */
-define('APP_CONTROLLERS_PATH', __DIR__ . '/../../Controllers');
-define('APP_MIDDLEWARES_PATH', __DIR__ . '/../../Middlewares');
-define('APP_ROUTERS_PATH',     __DIR__ . '/../../Routers');
-define('APP_MODELS_PATH',      __DIR__ . '/../../Models');
-define('APP_SEEDERS_PATH',     __DIR__ . '/../../Seeders');
+define('APP_CONTROLLERS_DIR', __DIR__ . '/../../Controllers');
+define('APP_MIDDLEWARES_DIR', __DIR__ . '/../../Middlewares');
+define('APP_ROUTERS_DIR',     __DIR__ . '/../../Routers');
+define('APP_MODELS_DIR',      __DIR__ . '/../../Models');
+define('APP_SEEDERS_DIR',     __DIR__ . '/../../Seeders');
 
 /**
  * Path constants for kit (sample/template) files — used by make-* commands
@@ -225,9 +226,9 @@ class Command
         $host = $flags['--host'] ?? 'localhost';
         $port = $flags['--port'] ?? '8000';
 
-        echo Colorizer::green("Starting development server..." . PHP_EOL);
-        echo Colorizer::gray("Listening on http://{$host}:{$port}" . PHP_EOL);
-        echo Colorizer::gray("Press Ctrl+C to stop.") . Colorizer::reset(PHP_EOL);
+        Logger::success("Starting development server...");
+        Logger::debug("Listening on http://{$host}:{$port}");
+        Logger::debug("Press Ctrl+C to stop.");
 
         $cmd = sprintf('php -S %s:%s -t Public', $host, $port);
 
@@ -249,19 +250,28 @@ class Command
         $name = $flags['--name'] ?? null;
 
         if (!$name)
-            die(Colorizer::red("Error: --name is required") . Colorizer::reset(PHP_EOL));
+        {
+            Logger::error("--name is required.");
+            die;
+        }
 
+        if (!is_dir(APP_MODELS_DIR))
+            mkdir(APP_MODELS_DIR, 0777, true);
+        
         $name     = !str_ends_with($name, 'Model') ? $name . 'Model' : $name;
         $content  = file_get_contents(KIT_MODEL_PATH);
         $content  = str_replace('SampleModel', $name, $content);
         $fileName = $name . '.php';
-        $path     = APP_MODELS_PATH . '/' . $fileName;
+        $path     = APP_MODELS_DIR . '/' . $fileName;
 
         if (file_exists($path))
-            die(Colorizer::red("Error: {$fileName} already exists") . Colorizer::reset(PHP_EOL));
+        {
+            Logger::error("{$fileName} already exists.");
+            die;
+        }
 
         file_put_contents($path, $content);
-        echo Colorizer::green('The new model is located at App/Models/' . $fileName) . Colorizer::reset(PHP_EOL);
+        Logger::success('The new model is located at App/Models/' . $fileName);
     }
 
     /**
@@ -279,19 +289,28 @@ class Command
         $name = $flags['--name'] ?? null;
 
         if (!$name)
-            die(Colorizer::red("Error: --name is required") . Colorizer::reset(PHP_EOL));
+        {
+            Logger::error("--name is required.");
+            die;
+        }
+        
+        if (!is_dir(APP_SEEDERS_DIR))
+            mkdir(APP_SEEDERS_DIR, 0777, true);
 
         $name     = !str_ends_with($name, 'Seeder') ? $name . 'Seeder' : $name;
         $content  = file_get_contents(KIT_SEEDER_PATH);
         $content  = str_replace('SampleSeeder', $name, $content);
         $fileName = $name . '.php';
-        $path     = APP_SEEDERS_PATH . '/' . $fileName;
+        $path     = APP_SEEDERS_DIR . '/' . $fileName;
 
         if (file_exists($path))
-            die(Colorizer::red("Error: {$fileName} already exists") . Colorizer::reset(PHP_EOL));
+        {
+            Logger::error("{$fileName} already exists.");
+            die;
+        }
 
         file_put_contents($path, $content);
-        echo Colorizer::green('The new seeder is located at App/Seeders/' . $fileName) . Colorizer::reset(PHP_EOL);
+        Logger::success('The new seeder is located at App/Seeders/' . $fileName);
     }
 
     /**
@@ -309,19 +328,28 @@ class Command
         $name = $flags['--name'] ?? null;
 
         if (!$name)
-            die(Colorizer::red("Error: --name is required") . Colorizer::reset(PHP_EOL));
+        {
+            Logger::error("--name is required.");
+            die;
+        }
+
+        if (!is_dir(APP_CONTROLLERS_DIR))
+            mkdir(APP_CONTROLLERS_DIR, 0777, true);
 
         $name     = !str_ends_with($name, 'Controller') ? $name . 'Controller' : $name;
         $content  = file_get_contents(KIT_CONTROLLER_PATH);
         $content  = str_replace('SampleController', $name, $content);
         $fileName = $name . '.php';
-        $path     = APP_CONTROLLERS_PATH . '/' . $fileName;
+        $path     = APP_CONTROLLERS_DIR . '/' . $fileName;
 
         if (file_exists($path))
-            die(Colorizer::red("Error: {$fileName} already exists") . Colorizer::reset(PHP_EOL));
+        {
+            Logger::error("{$fileName} already exists.");
+            die;
+        }
 
         file_put_contents($path, $content);
-        echo Colorizer::green('The new controller is located at App/Controllers/' . $fileName) . Colorizer::reset(PHP_EOL);
+        Logger::success('The new controller is located at App/Controllers/' . $fileName);
     }
 
     /**
@@ -339,19 +367,28 @@ class Command
         $name = $flags['--name'] ?? null;
 
         if (!$name)
-            die(Colorizer::red("Error: --name is required") . Colorizer::reset(PHP_EOL));
+        {
+            Logger::error("--name is required.");
+            die;
+        }
+
+        if (!is_dir(APP_MIDDLEWARES_DIR))
+            mkdir(APP_MIDDLEWARES_DIR, 0777, true);
 
         $name     = !str_ends_with($name, 'Middleware') ? $name . 'Middleware' : $name;
         $content  = file_get_contents(KIT_MIDDLEWARE_PATH);
         $content  = str_replace('SampleMiddleware', $name, $content);
         $fileName = $name . '.php';
-        $path     = APP_MIDDLEWARES_PATH . '/' . $fileName;
+        $path     = APP_MIDDLEWARES_DIR . '/' . $fileName;
 
         if (file_exists($path))
-            die(Colorizer::red("Error: {$fileName} already exists") . Colorizer::reset(PHP_EOL));
+        {
+            Logger::error("{$fileName} already exists.");
+            die;
+        }
 
         file_put_contents($path, $content);
-        echo Colorizer::green('The new middleware is located at App/Middleware/' . $fileName) . Colorizer::reset(PHP_EOL);
+        Logger::success('The new middleware is located at App/Middleware/' . $fileName);
     }
 
     /**
@@ -369,19 +406,28 @@ class Command
         $name = $flags['--name'] ?? null;
 
         if (!$name)
-            die(Colorizer::red("Error: --name is required") . Colorizer::reset(PHP_EOL));
+        {
+            Logger::error("--name is required.");
+            die;
+        }
+
+        if (!is_dir(APP_ROUTERS_DIR))
+            mkdir(APP_ROUTERS_DIR, 0777, true);
 
         $name     = !str_ends_with($name, 'Router') ? $name . 'Router' : $name;
         $content  = file_get_contents(KIT_ROUTER_PATH);
         $content  = str_replace('SampleRouter', $name, $content);
         $fileName = $name . '.php';
-        $path     = APP_ROUTERS_PATH . '/' . $fileName;
+        $path     = APP_ROUTERS_DIR . '/' . $fileName;
 
         if (file_exists($path))
-            die(Colorizer::red("Error: {$fileName} already exists") . Colorizer::reset(PHP_EOL));
+        {
+            Logger::error("{$fileName} already exists.");
+            die;
+        }
 
         file_put_contents($path, $content);
-        echo Colorizer::green('The new router is located at App/Routers/' . $fileName) . Colorizer::reset(PHP_EOL);
+        Logger::success('The new router is located at App/Routers/' . $fileName);
     }
 
     /**
@@ -413,7 +459,10 @@ class Command
         $name = $flags['--seeder'] ?? null;
 
         if (!$name)
-            die(Colorizer::red("Error: --seeder is required") . Colorizer::reset(PHP_EOL));
+        {
+            Logger::error("--seeder is required.");
+            die;
+        }
 
         $name        = !str_ends_with($name, 'Seeder') ? $name . 'Seeder' : $name;
         $dbConfig    = DatabaseConfig::fromDefault();
@@ -421,7 +470,10 @@ class Command
         $seederClass = "Wingman\\Seeders\\" . $name;
 
         if (!class_exists($seederClass))
-            die(Colorizer::red("Seeder class '{$seederClass}' not found.") . Colorizer::reset(PHP_EOL));
+        {
+            Logger::error("Seeder class '{$seederClass}' not found.");
+            die;
+        }
 
         $seeder = new $seederClass($database);
         $seeder->describe();
@@ -459,7 +511,10 @@ class Command
         $modelName = $flags['--model'] ?? null;
 
         if (!$modelName)
-            die(Colorizer::red("Error: --model is required") . Colorizer::reset(PHP_EOL));
+        {
+            Logger::error("--model is required");
+            die;
+        }
 
         $modelName  = !str_ends_with($modelName, 'Model') ? $modelName . 'Model' : $modelName;
         $dbConfig   = DatabaseConfig::fromDefault();
@@ -467,7 +522,10 @@ class Command
         $modelClass = "Wingman\\Models\\" . $modelName;
 
         if (!class_exists($modelClass))
-            die(Colorizer::red("Model class '{$modelClass}' not found.") . Colorizer::reset(PHP_EOL));
+        {
+            Logger::error("Model class '{$modelClass}' not found.");
+            die;
+        }
 
         $model = new $modelClass($database);
         $model->describe();
@@ -504,7 +562,10 @@ class Command
         $modelName = $flags['--model'] ?? null;
 
         if (!$modelName)
-            die(Colorizer::red("Error: --model is required") . Colorizer::reset(PHP_EOL));
+        {
+            Logger::error("--model is required");
+            die;
+        }
 
         $modelName  = !str_ends_with($modelName, 'Model') ? $modelName . 'Model' : $modelName;
         $dbConfig   = DatabaseConfig::fromDefault();
@@ -512,7 +573,10 @@ class Command
         $modelClass = "Wingman\\Models\\" . $modelName;
 
         if (!class_exists($modelClass))
-            die(Colorizer::red("Model class '{$modelClass}' not found.") . Colorizer::reset(PHP_EOL));
+        {
+            Logger::error("Model class '{$modelClass}' not found.");
+            die;
+        }
 
         $model = new $modelClass($database);
         $model->demolish();

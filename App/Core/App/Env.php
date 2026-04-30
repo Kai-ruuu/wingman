@@ -12,7 +12,7 @@ class Env
     {
         if (!file_exists($path))
         {
-            error_log("Error: .env file not found at {$path}" . PHP_EOL);
+            Logger::error(".env file not found at {$path}");
             return;
         }
 

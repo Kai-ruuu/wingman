@@ -89,7 +89,10 @@ class App
 
             // Prevent two routers from sharing the same prefix (e.g. two routers on '/users')
             if (in_array($routerInstance->prefix, $this->registeredPrefixes))
-                die("A router with the prefix '{$router->prefix}' was already registered.");
+            {
+                Logger::error("A router with the prefix '{$router->prefix}' was already registered.");
+                die;
+            }
 
             $this->registeredPrefixes[] = $routerInstance->prefix;
 

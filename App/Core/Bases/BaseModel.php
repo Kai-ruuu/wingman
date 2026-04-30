@@ -3,6 +3,7 @@
 namespace Wingman\Core\Bases;
 
 use mysqli;
+use Wingman\Core\App\Logger;
 use Wingman\Core\CLI\Colorizer;
 
 /**
@@ -293,7 +294,7 @@ class BaseModel
             return;
         }
 
-        echo Colorizer::green("Model table '{$this->table}' has been created") . Colorizer::reset(PHP_EOL);
+        Logger::success("Model table '{$this->table}' has been created");
     }
 
     /**
@@ -305,6 +306,6 @@ class BaseModel
         $fullQuery = "DROP TABLE IF EXISTS {$this->table};";
         $sql = $this->db->prepare($fullQuery);
         $sql->execute();
-        echo Colorizer::green("Model table '{$this->table}' has been dropped.") . Colorizer::reset(PHP_EOL);
+        Logger::success("Model table '{$this->table}' has been dropped.");
     }
 }

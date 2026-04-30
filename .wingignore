@@ -4,3 +4,4 @@ App/Core/App/Kit
 README.md
 wing
 .env
+Logs/*
