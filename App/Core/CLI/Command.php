@@ -9,40 +9,43 @@ use Wingman\Core\App\Database;
 use Wingman\Core\App\DatabaseConfig;
 use Wingman\Core\App\Logger;
 
-
 /**
  * Command
  *
- * Defines and implements all available wing CLI commands.
- * Each command is a static method that receives a parsed flags array
- * and performs its action, printing feedback to the terminal.
+ * The central command handler for Wingman's PHP-based CLI tool.
+ * Each public static method maps directly to a CLI command invoked via:
  *
- * Commands are registered in the $commands manifest, which drives
- * both the help output and flag validation in CommandHandler.
+ *   php wing <command> [flags]
+ *
+ * Commands are registered in the $commands array, which defines their
+ * description and accepted flags. This registry is used by the help
+ * command to generate the CLI usage output dynamically.
  *
  * Available commands:
- *   help              → Lists all commands and their flags
- *   serve             → Starts the PHP development server
- *   seed              → Runs one or all seeders
- *   build             → Creates one or all model tables
- *   demolish          → Drops one or all model tables
- *   make-model        → Scaffolds a new model file
- *   make-seeder       → Scaffolds a new seeder file
- *   make-controller   → Scaffolds a new controller file
- *   make-router       → Scaffolds a new router file
- *   make-middleware   → Scaffolds a new middleware file
+ *   help             Display all available commands and their flags
+ *   serve            Start the PHP development server
+ *   build            Create a model's database table
+ *   demolish         Drop a model's database table
+ *   seed             Run one or all seeders
+ *   make-model       Scaffold a new model file
+ *   make-controller  Scaffold a new controller file
+ *   make-router      Scaffold a new router file
+ *   make-middleware  Scaffold a new middleware file
+ *   make-seeder      Scaffold a new seeder file
  */
 class Command
 {
     /**
-     * The command manifest — defines every available CLI command and its flags.
+     * Registry of all available CLI commands and their metadata.
      *
-     * Each entry contains:
-     *   'desc'  → Human-readable description shown in the help output
-     *   'flags' → Associative array of supported flags, each with:
-     *               'desc'   → Description shown in help
-     *               'type'   → Expected value type ('string' or 'none')
-     *               'no-val' → true if the flag is a boolean switch (no value required)
+     * Each entry defines the command's description and its accepted flags.
+     * Flags include a description, a value type ('string' or 'none'), and
+     * whether they accept a value ('no-val' => true means the flag is a
+     * boolean switch with no accompanying value).
+     *
+     * This registry is used by help() to render the CLI usage output.
+     *
+     * @var array<string, array{desc: string, flags: array}>
      */
     public static array $commands = [
         'help' => [
@@ -167,15 +170,16 @@ class Command
     ];
 
     /**
-     * Prints all available commands and their flags to the terminal.
-     * Automatically driven by the $commands manifest — no manual updates needed
-     * when new commands are added.
+     * Displays all registered commands and their flags in the terminal.
      *
-     * Output format:
-     *   command-name    Description
-     *     --flag        Flag description
+     * Iterates over the $commands registry and prints each command name,
+     * description, and available flags with their descriptions. Output is
+     * color-coded using the Colorizer utility for readability.
      *
-     * @param array $flags Unused — accepted for consistent method signature
+     * Usage:
+     *   php wing help
+     *
+     * @param array $flags Unused. Accepted for signature consistency with other commands.
      */
     public static function help(array $flags): void
     {
@@ -198,10 +202,13 @@ class Command
      * Starts the PHP built-in development server.
      *
      * Defaults to localhost:8000 if no host or port flags are provided.
-     * Serves files from the Public/ directory. Blocks until interrupted
-     * with Ctrl+C.
+     * The server serves files from the Public/ directory.
      *
-     * @param array $flags Supported flags: --host, --port
+     * Usage:
+     *   php wing serve
+     *   php wing serve --host=0.0.0.0 --port=9000
+     *
+     * @param array $flags Accepted flags: --host (string), --port (string)
      */
     public static function serve(array $flags): void
     {
@@ -218,14 +225,17 @@ class Command
     }
 
     /**
-     * Scaffolds a new model file from the SampleModel kit template.
+     * Scaffolds a new model file from the kit template.
      *
-     * - Requires the --name flag
-     * - Automatically appends 'Model' to the name if not already present
-     * - Terminates with an error if --name is missing or the file already exists
-     * - Writes the new file to App/Models/
+     * Replaces the template placeholder class name with the provided name,
+     * and infers the table name by lowercasing and pluralizing if needed.
+     * Appends 'Model' to the name if not already present.
+     * Halts with an error if --name is missing or the file already exists.
      *
-     * @param array $flags Supported flags: --name (required)
+     * Usage:
+     *   php wing make-model --name=Post
+     *
+     * @param array $flags Required flags: --name (string)
      */
     public static function makeModel(array $flags): void
     {
@@ -239,10 +249,16 @@ class Command
 
         if (!is_dir(Globals::getDir('APP_MODELS')))
             mkdir(Globals::getDir('APP_MODELS'), 0777, true);
-        
+
+        // Infer the table name from the model name
+        $table = str_ends_with($name, 's') ? $name : $name . 's';
+        $table = strtolower($table);
+
+        // Ensure the class name ends with 'Model'
         $name     = !str_ends_with($name, 'Model') ? $name . 'Model' : $name;
         $content  = file_get_contents(Globals::getPath('KIT_MODEL'));
         $content  = str_replace('SampleModel', $name, $content);
+        $content  = str_replace('samples', $table, $content);
         $fileName = $name . '.php';
         $path     = Globals::getDir('APP_MODELS') . '/' . $fileName;
 
@@ -257,14 +273,16 @@ class Command
     }
 
     /**
-     * Scaffolds a new seeder file from the SampleSeeder kit template.
+     * Scaffolds a new seeder file from the kit template.
      *
-     * - Requires the --name flag
-     * - Automatically appends 'Seeder' to the name if not already present
-     * - Terminates with an error if --name is missing or the file already exists
-     * - Writes the new file to App/Seeders/
+     * Replaces the template placeholder class name with the provided name.
+     * Appends 'Seeder' to the name if not already present.
+     * Halts with an error if --name is missing or the file already exists.
      *
-     * @param array $flags Supported flags: --name (required)
+     * Usage:
+     *   php wing make-seeder --name=Post
+     *
+     * @param array $flags Required flags: --name (string)
      */
     public static function makeSeeder(array $flags): void
     {
@@ -275,10 +293,11 @@ class Command
             Logger::error("--name is required.");
             die;
         }
-        
+
         if (!is_dir(Globals::getDir('APP_SEEDERS')))
             mkdir(Globals::getDir('APP_SEEDERS'), 0777, true);
 
+        // Ensure the class name ends with 'Seeder'
         $name     = !str_ends_with($name, 'Seeder') ? $name . 'Seeder' : $name;
         $content  = file_get_contents(Globals::getPath('KIT_SEEDER'));
         $content  = str_replace('SampleSeeder', $name, $content);
@@ -296,14 +315,16 @@ class Command
     }
 
     /**
-     * Scaffolds a new controller file from the SampleController kit template.
+     * Scaffolds a new controller file from the kit template.
      *
-     * - Requires the --name flag
-     * - Automatically appends 'Controller' to the name if not already present
-     * - Terminates with an error if --name is missing or the file already exists
-     * - Writes the new file to App/Controllers/
+     * Replaces the template placeholder class name with the provided name.
+     * Appends 'Controller' to the name if not already present.
+     * Halts with an error if --name is missing or the file already exists.
      *
-     * @param array $flags Supported flags: --name (required)
+     * Usage:
+     *   php wing make-controller --name=Post
+     *
+     * @param array $flags Required flags: --name (string)
      */
     public static function makeController(array $flags): void
     {
@@ -318,6 +339,7 @@ class Command
         if (!is_dir(Globals::getDir('APP_CONTROLLERS')))
             mkdir(Globals::getDir('APP_CONTROLLERS'), 0777, true);
 
+        // Ensure the class name ends with 'Controller'
         $name     = !str_ends_with($name, 'Controller') ? $name . 'Controller' : $name;
         $content  = file_get_contents(Globals::getPath('KIT_CONTROLLER'));
         $content  = str_replace('SampleController', $name, $content);
@@ -335,14 +357,16 @@ class Command
     }
 
     /**
-     * Scaffolds a new middleware file from the SampleMiddleware kit template.
+     * Scaffolds a new middleware file from the kit template.
      *
-     * - Requires the --name flag
-     * - Automatically appends 'Middleware' to the name if not already present
-     * - Terminates with an error if --name is missing or the file already exists
-     * - Writes the new file to App/Middlewares/
+     * Replaces the template placeholder class name with the provided name.
+     * Appends 'Middleware' to the name if not already present.
+     * Halts with an error if --name is missing or the file already exists.
      *
-     * @param array $flags Supported flags: --name (required)
+     * Usage:
+     *   php wing make-middleware --name=Auth
+     *
+     * @param array $flags Required flags: --name (string)
      */
     public static function makeMiddleware(array $flags): void
     {
@@ -357,6 +381,7 @@ class Command
         if (!is_dir(Globals::getDir('APP_MIDDLEWARES')))
             mkdir(Globals::getDir('APP_MIDDLEWARES'), 0777, true);
 
+        // Ensure the class name ends with 'Middleware'
         $name     = !str_ends_with($name, 'Middleware') ? $name . 'Middleware' : $name;
         $content  = file_get_contents(Globals::getPath('KIT_MIDDLEWARE'));
         $content  = str_replace('SampleMiddleware', $name, $content);
@@ -374,14 +399,16 @@ class Command
     }
 
     /**
-     * Scaffolds a new router file from the SampleRouter kit template.
+     * Scaffolds a new router file from the kit template.
      *
-     * - Requires the --name flag
-     * - Automatically appends 'Router' to the name if not already present
-     * - Terminates with an error if --name is missing or the file already exists
-     * - Writes the new file to App/Routers/
+     * Replaces the template placeholder class name with the provided name.
+     * Appends 'Router' to the name if not already present.
+     * Halts with an error if --name is missing or the file already exists.
      *
-     * @param array $flags Supported flags: --name (required)
+     * Usage:
+     *   php wing make-router --name=Post
+     *
+     * @param array $flags Required flags: --name (string)
      */
     public static function makeRouter(array $flags): void
     {
@@ -396,6 +423,7 @@ class Command
         if (!is_dir(Globals::getDir('APP_ROUTERS')))
             mkdir(Globals::getDir('APP_ROUTERS'), 0777, true);
 
+        // Ensure the class name ends with 'Router'
         $name     = !str_ends_with($name, 'Router') ? $name . 'Router' : $name;
         $content  = file_get_contents(Globals::getPath('KIT_ROUTER'));
         $content  = str_replace('SampleRouter', $name, $content);
@@ -413,18 +441,18 @@ class Command
     }
 
     /**
-     * Runs one or all seeders against the database.
+     * Runs one or all registered seeders against the database.
      *
-     * - Pass --all to run every seeder registered in Wingman\Config\Seeders
-     * - Pass --seeder=User to run a specific seeder (e.g. UserSeeder)
-     * - Automatically appends 'Seeder' to the name if not already present
-     * - Terminates with an error if --seeder is missing (when --all is not passed)
-     * - Terminates with an error if the resolved seeder class does not exist
+     * When --all is passed, all seeders registered in the Seeders config
+     * are run in order. When --seeder is passed, only the specified seeder
+     * is instantiated and run. Appends 'Seeder' to the name if not present.
+     * Halts with an error if the seeder class cannot be found.
      *
-     * Note: Update the DatabaseConfig method here to match your environment
-     * if you're not using the default local setup.
+     * Usage:
+     *   php wing seed --all
+     *   php wing seed --seeder=Post
      *
-     * @param array $flags Supported flags: --all (no value), --seeder=Name (required if --all absent)
+     * @param array $flags Accepted flags: --all (switch), --seeder (string)
      */
     public static function seed(array $flags): void
     {
@@ -446,6 +474,7 @@ class Command
             die;
         }
 
+        // Ensure the class name ends with 'Seeder'
         $name        = !str_ends_with($name, 'Seeder') ? $name . 'Seeder' : $name;
         $dbConfig    = DatabaseConfig::fromDefault();
         $database    = Database::fromConfig($dbConfig);
@@ -463,19 +492,21 @@ class Command
     }
 
     /**
-     * Creates one or all model tables in the database.
+     * Creates one or all model database tables.
      *
-     * - Pass --all to build every model registered in Wingman\Config\Models
-     * - Pass --model=User to build a specific model table (e.g. UserModel)
-     * - Pass --schema alongside either flag to print the SQL schema upon creation
-     * - Automatically appends 'Model' to the name if not already present
-     * - Terminates with an error if --model is missing (when --all is not passed)
-     * - Terminates with an error if the resolved model class does not exist
+     * When --all is passed, all models registered in the Models config
+     * have their tables created. When --model is passed, only the specified
+     * model's table is created. Passing --schema additionally prints the
+     * generated SQL schema to the terminal after creation.
+     * Appends 'Model' to the name if not present.
+     * Halts with an error if the model class cannot be found.
      *
-     * Note: Update the DatabaseConfig method here to match your environment
-     * if you're not using the default local setup.
+     * Usage:
+     *   php wing build --all
+     *   php wing build --model=Post
+     *   php wing build --model=Post --schema
      *
-     * @param array $flags Supported flags: --all (no value), --model=Name (required if --all absent), --schema (no value, optional)
+     * @param array $flags Accepted flags: --all (switch), --model (string), --schema (switch)
      */
     public static function build(array $flags): void
     {
@@ -498,6 +529,7 @@ class Command
             die;
         }
 
+        // Ensure the class name ends with 'Model'
         $modelName  = !str_ends_with($modelName, 'Model') ? $modelName . 'Model' : $modelName;
         $dbConfig   = DatabaseConfig::fromDefault();
         $database   = Database::fromConfig($dbConfig);
@@ -515,19 +547,19 @@ class Command
     }
 
     /**
-     * Drops one or all model tables from the database.
+     * Drops one or all model database tables.
      *
-     * - Pass --all to drop every model table registered in Wingman\Config\Models
-     * - Pass --model=User to drop a specific model table (e.g. UserModel)
-     * - Automatically appends 'Model' to the name if not already present
-     * - Terminates with an error if --model is missing (when --all is not passed)
-     * - Terminates with an error if the resolved model class does not exist
-     * - Tables are dropped using DROP TABLE IF EXISTS — no error for missing tables
+     * When --all is passed, all models registered in the Models config
+     * have their tables dropped. When --model is passed, only the specified
+     * model's table is dropped.
+     * Appends 'Model' to the name if not present.
+     * Halts with an error if the model class cannot be found.
      *
-     * Note: Update the DatabaseConfig method here to match your environment
-     * if you're not using the default local setup.
+     * Usage:
+     *   php wing demolish --all
+     *   php wing demolish --model=Post
      *
-     * @param array $flags Supported flags: --all (no value), --model=Name (required if --all absent)
+     * @param array $flags Accepted flags: --all (switch), --model (string)
      */
     public static function demolish(array $flags): void
     {
@@ -549,6 +581,7 @@ class Command
             die;
         }
 
+        // Ensure the class name ends with 'Model'
         $modelName  = !str_ends_with($modelName, 'Model') ? $modelName . 'Model' : $modelName;
         $dbConfig   = DatabaseConfig::fromDefault();
         $database   = Database::fromConfig($dbConfig);

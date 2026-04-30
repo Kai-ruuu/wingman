@@ -141,31 +141,31 @@ class QueryableModel extends BaseModel
         return $this;
     }
 
-    public function all(): array
+    public function all(array $excluding = []): array
     {
-        $result = $this->fresh()->get($this->db);
+        $result = $this->fresh()->get($this->db, $excluding);
         $this->fresh();
         return $result;
     }
 
-    public function get(): array
+    public function get(array $excluding = []): array
     {
-        $result = $this->query->get($this->db);
+        $result = $this->query->get($this->db, $excluding);
         $this->fresh();
         return $result;
     }
 
-    public function first(): array|null
+    public function first(array $excluding = []): array|null
     {
-        $result = $this->query->first($this->db);
+        $result = $this->query->first($this->db, $excluding);
         $this->fresh();
         return $result;
     }
 
-    public function find(int $id, string $primaryKey = 'id'): array|null
+    public function find(int $id, string $primaryKey = 'id', array $excluding = []): array|null
     {
         $this->fresh();
-        return $this->where($primaryKey, '=', $id)->first();
+        return $this->where($primaryKey, '=', $id)->first($excluding);
     }
 
     public function count(): int

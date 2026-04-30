@@ -30,7 +30,6 @@ class QueryBuilder
         return $this;
     }
 
-
     public function join(string $table, string $first, string $operator, string $second, string $type = 'INNER'): self
     {
         $type = strtoupper($type);
@@ -221,19 +220,41 @@ class QueryBuilder
         return 'WHERE ' . implode(' OR ', $parts);
     }
 
-    public function get(mysqli $db): array
+    public function get(mysqli $db, array $excluding = []): array
     {
         $stmt = $this->prepare($db);
         $stmt->execute();
-        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $results = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        foreach ($results as $index => $_result)
+        {
+            foreach ($excluding as $exclusion)
+            {
+                if (array_key_exists($exclusion, $results[$index]))
+                    unset($results[$index][$exclusion]);
+            }
+        }
+
+        return $results;
     }
 
-    public function first(mysqli $db): array|null
+    public function first(mysqli $db, array $excluding = []): array|null
     {
         $this->limit(1);
         $stmt = $this->prepare($db);
         $stmt->execute();
-        return $stmt->get_result()->fetch_assoc() ?: null;
+        $result = $stmt->get_result()->fetch_assoc();
+
+        if (!$result)
+            return null;
+
+        foreach ($excluding as $exclusion)
+        {
+            if (array_key_exists($exclusion, $result))
+                unset($result[$exclusion]);
+        }
+
+        return $result;
     }
 
     public function count(mysqli $db): int
@@ -301,7 +322,7 @@ class QueryBuilder
         $stmt->bind_param($types, ...$bindings);
         $stmt->execute();
 
-        return $stmt->affected_rows; // returns number of inserted rows
+        return $stmt->affected_rows; 
     }
 
     public function update(mysqli $db, array $data): int
@@ -310,7 +331,6 @@ class QueryBuilder
         $where    = $this->buildWhereClause();
         $sql      = trim("UPDATE {$this->table} SET {$sets} {$where}");
 
-        // update bindings = data values first, then where bindings
         $dataTypes    = implode('', array_map(fn($v) => $this->resolveType($v), array_values($data)));
         $whereTypes   = implode('', $this->bindTypes);
         $types        = $dataTypes . $whereTypes;
@@ -323,9 +343,8 @@ class QueryBuilder
 
         $stmt->execute();
 
-        return $stmt->affected_rows; // returns number of updated rows
+        return $stmt->affected_rows; 
     }
-
 
     public function delete(mysqli $db): int
     {
@@ -340,7 +359,7 @@ class QueryBuilder
 
         $stmt->execute();
 
-        return $stmt->affected_rows; // returns number of deleted rows
+        return $stmt->affected_rows; 
     }
 
     private function prepare(mysqli $db): \mysqli_stmt

@@ -295,7 +295,7 @@ php wing seed --all
 
 A safe, fluent query builder with full support for filtering, joining, grouping, ordering, and pagination. All values are parameterized — SQL injection safe by default.
 
-📄 [View the Full Query Builder & QueryableModel Documentation](./Docs/query-builder-and-queryable-model.pdf)
+📄 [View the Full Query Builder & QueryableModel Documentation](./Docs/wingman-query-docs.pdf)
 
 ```php
 $posts = $post
