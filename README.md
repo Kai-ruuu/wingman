@@ -63,12 +63,14 @@ This copies all Wingman project essentials into the current directory. The comma
 
 ### wing.exe Commands
 
-| Command            | Description |
-| ------------------ | ----------- |
-| `wing new`         | Scaffolds a new Wingman project into the current (empty) directory |
-| `wing new --clean` | Same as `wing new`, but strips all comments from PHP files for a minimal starting point |
-| `wing build`       | Bundles the project into `Builds/build-<timestamp>/`, excluding files listed in `.wingignore` |
-| `wing clean`       | Wipes the current directory so it can be reused as a fresh Wingman project |
+| Command               | Description |
+| --------------------- | ----------- |
+| `wing new`            | Scaffolds a new Wingman project into the current (empty) directory |
+| `wing new --clean`    | Same as `wing new`, but strips all comments from PHP files for a minimal starting point |
+| `wing build`          | Bundles the project into `Builds/build-<timestamp>/`, excluding files listed in `.wingignore` |
+| `wing clean`          | Wipes the current directory so it can be reused as a fresh Wingman project |
+| `wing stats`          | Displays the total size of the current project, excluding the `Builds/` directory |
+| `wing stats --latest` | Displays the total size of the most recent build based on its timestamp |
 
 ---
 
@@ -120,6 +122,33 @@ Delete all files in the current directory? [yes]
 Enter anything other than `n` or `no` to proceed.
 
 > **Warning:** Do not run this command inside the Wingman framework's source directory, as it will delete the source files.
+
+---
+
+### wing stats
+
+Displays the total size of the current project, excluding the `Builds/` directory and `.git/`.
+
+```bash
+wing stats
+```
+
+```
+Project size : 322.00 KB
+```
+
+Use `--latest` to display the size of the most recent build instead, determined by the timestamp in the build folder name.
+
+```bash
+wing stats --latest
+```
+
+```
+Latest build : build-2026-04-30_17-04-47
+Size         : 90.97 KB
+```
+
+> **Note:** `wing stats --latest` requires at least one build to exist under `Builds/`. Run `wing build` first if the directory is empty.
 
 ---
 
