@@ -27,8 +27,6 @@ It's designed for building focused, fast REST APIs where you know exactly what's
 | CORS Configuration            | ✅ Supported |
 | Rate Limiting                 | 🔧 Coming soon |
 | Date Input Validation         | 🔧 Coming soon |
-| Built-in Uploads Handling     | 🔧 Coming soon |
-| Built-in Auth Handling (JWT)  | 🔧 Coming soon |
 
 ---
 
