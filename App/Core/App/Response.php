@@ -134,6 +134,12 @@ class Response
     {
         self::json(empty($data) ? ['message' => 'Not found.'] : $data, 404);
     }
+    
+
+    public static function manyRequests(array $data = []): void
+    {
+        self::json(empty($data) ? ['message' => 'Too many requests.'] : $data, 429);
+    }
 
     /**
      * 500 Internal Server Error

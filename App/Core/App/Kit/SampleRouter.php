@@ -18,5 +18,10 @@ class SampleRouter extends BaseRouter
             ]);
 
         $this->get('/{id}', SampleController::class, 'showById');
+            // 60 max request per minute
+            // ->withLimitation(60, 60);
+        
+        // 60 max requests per minute to all of the routes defined above
+        $this->withLimitationToAll(60, 60);
     }
 }

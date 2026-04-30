@@ -25,7 +25,7 @@ It's designed for building focused, fast REST APIs where you know exactly what's
 | Input Validation              | ✅ Supported (Partially) |
 | Logging                       | ✅ Supported |
 | CORS Configuration            | ✅ Supported |
-| Rate Limiting                 | 🔧 Coming soon |
+| Rate Limiting                 | ✅ Supported |
 | Date Input Validation         | 🔧 Coming soon |
 
 ---
@@ -149,6 +149,80 @@ php wing serve
 php wing serve --host=0.0.0.0 --port=9000
 ```
 
+### Routing
+
+Routes are defined inside a router's `describe()` method. Each router extends `BaseRouter` and maps HTTP methods and path patterns to controller methods.
+
+```php
+class PostRouter extends BaseRouter
+{
+    public function describe(): void
+    {
+        $this->setPrefix('/api/posts'); // optional prefix
+
+        $this->get('/', PostController::class, 'index');
+        $this->get('/{id}', PostController::class, 'show');
+        $this->post('/', PostController::class, 'store');
+        $this->put('/{id}', PostController::class, 'update');
+        $this->delete('/{id}', PostController::class, 'destroy');
+    }
+}
+```
+
+#### Middlewares
+
+Attach an ordered middleware chain to any route using `withMiddlewares()`. Middlewares run before the controller method is invoked.
+
+```php
+$this->get('/', PostController::class, 'index')
+    ->withMiddlewares([
+        AuthMiddleware::class,
+        LogMiddleware::class,
+    ]);
+```
+
+#### Rate Limiting
+
+Limit the number of requests a client can make to a route within a given time window. Rate limiting is based on the client's IP address and uses file-based storage — no additional dependencies required.
+
+Apply a limit to a single route using `withLimitation(maxRequests, perSeconds)`:
+
+```php
+$this->post('/login', AuthController::class, 'login')
+    ->withLimitation(5, 60); // 5 requests per minute
+```
+
+Apply a limit to all routes defined in the router using `withLimitationToAll(maxRequests, perSeconds)`:
+
+```php
+class SampleRouter extends BaseRouter
+{
+    public function describe(): void
+    {
+        $this->setPrefix('/api/sample');
+
+        $this->get('/', SampleController::class, 'show')
+            ->withMiddlewares([
+                SampleMiddleware::class,
+            ]);
+
+        $this->get('/{id}', SampleController::class, 'showById')
+            // Apply a limit of 60 requests per minute to this specific route
+            ->withLimitation(60, 60);
+
+        /**
+         * Apply a limit of 60 requests per minute to all routes defined above
+         * 
+         * NOTE: Do not use this if you have already applied rate limiting to any
+         * specific routes above, as it will overwrite those individual limits.
+         */
+        $this->withLimitationToAll(60, 60);
+    }
+}
+```
+
+When a client exceeds the limit, Wingman responds with `429 Too Many Requests` and a human-readable message indicating when they can retry.
+
 ### Models & Schema Builder
 
 Define your database schema directly in your model using a fluent, chainable API — no raw SQL required.
@@ -251,7 +325,7 @@ class AuthMiddleware extends BaseMiddleware
         $token = // extract token from request
 
         if (!$token)
-            Response::bad['message' => 'Invalid authentication token.'];
+            Response::bad(['message' => 'Invalid authentication token.']);
 
         // pass authenticated user downstream via context
         $this->context->add('auth_user', $user);

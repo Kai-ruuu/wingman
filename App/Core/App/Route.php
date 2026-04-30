@@ -43,6 +43,8 @@ class Route
     /** The shared mysqli database connection passed down to middlewares and controllers */
     private ?mysqli $db = null;
 
+    private ?RateLimiter $limiter = null;
+
     /**
      * @param HttpMethod $httpMethod The HTTP method (GET, POST, etc.)
      * @param string     $path       The route path pattern
@@ -78,6 +80,12 @@ class Route
     public function withMiddlewares(array $middlewares): self
     {
         $this->middleWares = $middlewares;
+        return $this;
+    }
+
+    public function withLimitation(int $maxRequests, int $perSeconds): self
+    {
+        $this->limiter = new RateLimiter($maxRequests, $perSeconds);
         return $this;
     }
 
@@ -133,6 +141,12 @@ class Route
         if (!method_exists($this->controller, $method))
             Response::internalServerError(['message' => "Method '{$method}' not found on '{$this->controller}'."]);
 
+        if ($this->limiter && !$this->limiter->isAllowed())
+        {
+            $window = $this->limiter->getReadableWindow();
+            Response::manyRequests(['message' => "Too many login attempts. Try again in {$window}."]);
+        }
+        
         // Run middlewares to build the context, then dispatch to the controller
         $context  = $this->runMiddlewares();
         $request  = new Request($context, $params);
