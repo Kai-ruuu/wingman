@@ -1,6 +1,6 @@
 {
     "name": "kyle_advincula/wingman",
-    "description": "A PHP backend framework built for rapid api development.",
+    "description": "A PHP API backend framework built for rapid API development.",
     "autoload": {
         "psr-4": {
             "Wingman\\": "App/"

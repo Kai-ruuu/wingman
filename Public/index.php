@@ -1,6 +1,7 @@
 <?php
 
 use Wingman\Config\Globals;
+use Wingman\Config\PrivateGlobals;
 use Wingman\Core\App\App;
 use Wingman\Core\App\CorsHandler;
 use Wingman\Core\App\Database;
@@ -49,50 +50,6 @@ CorsHandler::build()->listen();
 
 /**
  * =========================================================================
- * Database Configuration
- * =========================================================================
- *
- * Wingman provides three ways to configure your database connection
- * depending on your environment. Choose one and remove the others.
- *
- * -------------------------------------------------------------------------
- * Option 1 — fromDefault()
- * -------------------------------------------------------------------------
- * Connects using sensible local defaults. No setup needed.
- * Good for getting started quickly in development.
- *
- *   hostname      → localhost
- *   username      → root
- *   password      → (empty)
- *   database_name → app-database
- *
- * -------------------------------------------------------------------------
- * Option 2 — fromCustom(hostname, username, password, database_name)
- * -------------------------------------------------------------------------
- * Connects using explicit credentials. Use this when your local database
- * setup differs from the defaults (e.g. a different port, username, or name).
- *
- *   $dbConfig = DatabaseConfig::fromCustom('localhost', 'john', 'secret', 'wingman');
- *
- * -------------------------------------------------------------------------
- * Option 3 — fromEnv()                                    ← recommended for prod
- * -------------------------------------------------------------------------
- * Reads credentials from environment variables set in your .env file
- * or directly on your server / Docker container. Keeps sensitive
- * credentials out of your codebase entirely.
- *
- * Required environment variables:
- *   DB_HOST   → database hostname
- *   DB_USER   → database username
- *   DB_PASS   → database password
- *   DB_NAME   → database name
- *
- *   $dbConfig = DatabaseConfig::fromEnv();
- */
-$dbConfig = DatabaseConfig::fromDefault();
-
-/**
- * =========================================================================
  * Database Connection
  * =========================================================================
  *
@@ -100,7 +57,8 @@ $dbConfig = DatabaseConfig::fromDefault();
  * The process terminates immediately if the connection fails,
  * printing a descriptive error to the console.
  */
-$database = Database::fromConfig($dbConfig);
+$config = PrivateGlobals::getDatabaseConfig();
+$database = Database::fromConfig($config);
 
 /**
  * =========================================================================
