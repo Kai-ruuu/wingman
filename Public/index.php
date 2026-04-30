@@ -1,6 +1,7 @@
 <?php
 
 use Wingman\Core\App\App;
+use Wingman\Core\App\CorsHandler;
 use Wingman\Core\App\Database;
 use Wingman\Core\App\DatabaseConfig;
 use Wingman\Core\App\Env;
@@ -20,6 +21,28 @@ require __DIR__ . '/../vendor/autoload.php';
  * as a reference for the required keys.
  */
 Env::load();
+
+/**
+ * =========================================================================
+ * CORS Configuration
+ * =========================================================================
+ * 
+ * Apply CORS headers before any routing or middleware logic runs.
+ *
+ * Restrict to specific origins and enable credentials for authenticated
+ * cross-origin requests (e.g. from a separate frontend):
+ *
+ *   CorsHandler::build()
+ *       ->withAllowedOrigins(['https://yourfrontend.com'])
+ *       ->withAllowedMethods(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])
+ *       ->withAllowedHeaders(['Content-Type', 'Authorization', 'X-Requested-With'])
+ *       ->withAllowedCredentials()
+ *       ->withCachePreflight(86400)
+ *       ->listen();
+ *
+ * Or use the shorthand for a wildcard, no-credentials setup (all defaults apply):
+ */
+CorsHandler::build()->listen();
 
 /**
  * =========================================================================
