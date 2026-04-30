@@ -2,6 +2,7 @@
 
 namespace Wingman\Core\App;
 
+use DateTime;
 use Wingman\Core\App\Response;
 
 /**
@@ -230,6 +231,31 @@ class Validator
         return $decoded;
     }
 
+    /**
+     * Validates an optional date string.
+     *
+     * Returns null if the value is empty. Validates the date against the
+     * provided format using DateTime::createFromFormat(). Responds with 422
+     * if the value does not match the expected format or is not a real date.
+     *
+     * @param  string      $label   Field name used in error messages (e.g. 'birth date')
+     * @param  ?string     $value   Raw input value to validate (e.g. '2000-12-31')
+     * @param  string      $format  Expected date format (default: 'Y-m-d')
+     * @return string|null          Validated date string, or null if empty
+     */
+    public static function date(string $label, ?string $value, string $format = 'Y-m-d'): ?string
+    {
+        if (empty($value))
+            return null;
+
+        $parsed = DateTime::createFromFormat($format, $value);
+
+        if (!$parsed || $parsed->format($format) !== $value)
+            Response::unprocessableEntity(['message' => $label . ' should be a valid date in the format ' . $format . '.']);
+
+        return $value;
+    }
+
     // -------------------------------------------------------------------------
     // Required variants
     // Behave identically to their optional counterparts but respond with 422
@@ -353,5 +379,22 @@ class Validator
             Response::unprocessableEntity(['message' => $label . ' is required.']);
 
         return self::json($label, $value);
+    }
+
+    /**
+     * Validates a required date string.
+     * Responds with 422 if the value is empty or does not match the expected format.
+     *
+     * @param  string  $label   Field name used in error messages
+     * @param  ?string $value   Raw input value to validate
+     * @param  string  $format  Expected date format (default: 'Y-m-d')
+     * @return string           Validated date string
+     */
+    public static function requiredDate(string $label, ?string $value, string $format = 'Y-m-d'): string
+    {
+        if (empty($value))
+            Response::unprocessableEntity(['message' => $label . ' is required.']);
+
+        return self::date($label, $value, $format);
     }
 }

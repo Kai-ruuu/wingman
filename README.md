@@ -22,11 +22,10 @@ It's designed for building focused, fast REST APIs where you know exactly what's
 | Models                        | ✅ Supported |
 | Query Chaining                | ✅ Supported |
 | Middlewares                   | ✅ Supported |
-| Input Validation              | ✅ Supported (Partially) |
+| Input Validation              | ✅ Supported |
 | Logging                       | ✅ Supported |
 | CORS Configuration            | ✅ Supported |
 | Rate Limiting                 | ✅ Supported |
-| Date Input Validation         | 🔧 Coming soon |
 
 ---
 
@@ -44,7 +43,7 @@ It's designed for building focused, fast REST APIs where you know exactly what's
 
 ### Using wing.exe (Recommended)
 
-`wing.exe` is a standalone CLI tool for bootstrapping and managing Wingman projects outside of PHP. It handles project scaffolding, production builds, and directory cleanup.
+`wing.exe` is a standalone CLI tool built with Rust for bootstrapping and managing Wingman projects outside of PHP. It handles project scaffolding, production builds, and directory cleanup — with no PHP or Composer required to run it.
 
 **Setup:**
 
@@ -97,15 +96,14 @@ Logs/*
 
 ### wing clean
 
-Wipes all files and folders in the current directory (except `wing.exe` itself), resetting it so you can run `wing new` again.
+Wipes all files and folders in the current directory, resetting it so you can run `wing new` again.
 
 You'll be prompted to confirm before anything is deleted:
-
-```
 Delete all files in the current directory? [yes]
-```
 
 Enter anything other than `n` or `no` to proceed.
+
+> **Warning:** Do not run this command inside the Wingman framework's source directory, as it will delete the source files.
 
 ---
 
@@ -185,14 +183,14 @@ $this->get('/', PostController::class, 'index')
 
 Limit the number of requests a client can make to a route within a given time window. Rate limiting is based on the client's IP address and uses file-based storage — no additional dependencies required.
 
-Apply a limit to a single route using `withLimit(maxRequests, perSeconds)`:
+Apply a limit to a single route using `withLimitation(maxRequests, perSeconds)`:
 
 ```php
 $this->post('/login', AuthController::class, 'login')
-    ->withLimit(5, 60); // 5 requests per minute
+    ->withLimitation(5, 60); // 5 requests per minute
 ```
 
-Apply a limit to all routes defined in the router using `withLimitToAll(maxRequests, perSeconds)`:
+Apply a limit to all routes defined in the router using `withLimitationToAll(maxRequests, perSeconds)`:
 
 ```php
 class SampleRouter extends BaseRouter
@@ -208,15 +206,15 @@ class SampleRouter extends BaseRouter
 
         $this->get('/{id}', SampleController::class, 'showById')
             // Apply a limit of 60 requests per minute to this specific route
-            ->withLimit(60, 60);
+            ->withLimitation(60, 60);
 
         /**
          * Apply a limit of 60 requests per minute to all routes defined above
-         * 
+         *
          * NOTE: Do not use this if you have already applied rate limiting to any
          * specific routes above, as it will overwrite those individual limits.
          */
-        $this->withLimitToAll(60, 60);
+        $this->withLimitationToAll(60, 60);
     }
 }
 ```
