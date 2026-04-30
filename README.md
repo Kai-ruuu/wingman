@@ -160,7 +160,7 @@ class PostModel extends QueryableModel
 {
     protected string $table = 'posts';
 
-    public function schema(): void
+    public function describe(): void
     {
         $this->primaryKey()
              ->integer('user_id')->required()

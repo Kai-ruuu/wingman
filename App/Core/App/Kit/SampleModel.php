@@ -14,6 +14,7 @@ class SampleModel extends QueryableModel
             ->primaryKey()
             ->characters('username', 50)->unique()->required()
             ->characters('email')->unique()->required()
-            ->characters('password_hash')->unique()->required();
+            ->characters('password_hash')->unique()->required()
+            ->timestamps();
     }
 }
