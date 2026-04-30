@@ -7,48 +7,24 @@ use Wingman\Core\App\Response;
 use Wingman\Core\App\Route;
 
 /**
- * App
+ * The application entry point.
  *
- * The core application class and entry point of every Wingman application.
- * Responsible for bootstrapping the app, registering routers, compiling
- * route patterns, matching incoming requests, and dispatching them to the
- * appropriate route handler.
- *
- * Usage:
- *
- *   // Without a database connection
- *   App::default()
- *       ->withRouters([HomeRouter::class])
- *       ->listen();
- *
- *   // With a database connection
- *   App::withDatabase($db)
- *       ->withRouters([UserRouter::class, PostRouter::class])
- *       ->listen();
+ * Responsible for registering routers, compiling and matching routes,
+ * and dispatching incoming HTTP requests to the appropriate handler.
  */
 class App
 {
-    /**
-     * The mysqli database connection instance.
-     * Null if the app was initialized without a database (e.g. App::default()).
-     */
+    /** @var mysqli|null The database connection passed down to routers and controllers. */
     private ?mysqli $db = null;
 
-    /**
-     * All registered routes grouped by HTTP method.
-     * Structure: ['GET' => [Route, ...], 'POST' => [Route, ...], ...]
-     */
+    /** @var array<string, Route[]> Routes grouped by HTTP method (e.g. 'GET', 'POST'). */
     private array $routes = [];
 
-    /**
-     * Tracks registered router prefixes to prevent duplicate prefix registration.
-     * e.g. ['/users', '/posts']
-     */
+    /** @var string[] Tracks registered router prefixes to prevent duplicates. */
     private array $registeredPrefixes = [];
 
     /**
-     * Creates a new App instance without a database connection.
-     * Use this for apps or routers that don't require database access.
+     * Creates an App instance without a database connection.
      */
     public static function default(): self
     {
@@ -56,12 +32,12 @@ class App
     }
 
     /**
-     * Creates a new App instance with a mysqli database connection.
-     * The connection is passed down to all routers, middlewares, and controllers.
+     * Creates an App instance with a database connection.
+     * The connection is passed down to all routers, routes, and controllers.
      */
     public static function withDatabase(mysqli $db): self
     {
-        $instance = new self();
+        $instance     = new self();
         $instance->db = $db;
         return $instance;
     }
@@ -69,14 +45,11 @@ class App
     /**
      * Registers an array of router class names with the application.
      *
-     * For each router:
-     * - Instantiates the router with the current database connection
-     * - Calls describe() to register the router's routes
-     * - Guards against duplicate router prefixes
-     * - Merges the router's routes into the app's global route table
+     * Each router is instantiated, described (routes registered), and its
+     * routes are merged into the application's route table keyed by HTTP method.
+     * Duplicate prefixes are rejected to prevent ambiguous routing.
      *
-     * @param  array $routers Array of fully-qualified router class name strings
-     * @return self           Returns the app instance for method chaining
+     * @param string[] $routers Fully-qualified class names of BaseRouter subclasses.
      */
     public function withRouters(array $routers): self
     {
@@ -84,124 +57,128 @@ class App
         {
             $routerInstance = new $router($this->db);
 
-            // Populate the router's internal route list by calling its describe() method
+            // Populate the router's route table by calling its describe() method.
             $routerInstance->describe();
 
-            // Prevent two routers from sharing the same prefix (e.g. two routers on '/users')
             if (in_array($routerInstance->prefix, $this->registeredPrefixes))
             {
-                Logger::error("A router with the prefix '{$router->prefix}' was already registered.");
+                Logger::error("A router with the prefix '{$routerInstance->prefix}' was already registered.");
                 die;
             }
 
             $this->registeredPrefixes[] = $routerInstance->prefix;
 
-            // Merge this router's routes into the global route table
-            $this->routes = array_merge($this->routes, $routerInstance->routes);
+            // Merge routes per HTTP method to preserve string keys (GET, POST, etc.).
+            foreach ($routerInstance->routes as $method => $routes)
+            {
+                $this->routes[$method] = array_merge($this->routes[$method] ?? [], $routes);
+            }
         }
 
         return $this;
     }
 
     /**
-     * Compiles a route path string into a regex pattern and extracts parameter names.
+     * Compiles a route path pattern into a named regex for matching.
      *
      * Supports dynamic segments in two forms:
-     * - {id}         → captures any non-slash value using the default pattern [^/]+
-     * - {id:\d+}     → captures a value matching the custom pattern \d+
+     *   - {name}         — matches any non-slash sequence
+     *   - {name:pattern} — matches the given regex pattern
+     *
+     * Static segments are escaped so metacharacters in path literals
+     * (e.g. dots) don't affect matching.
      *
      * Example:
-     *   Input:  '/users/{id:\d+}/posts/{slug}'
-     *   Output: [
-     *     'regex'  => '#^/users/(\d+)/posts/([^/]+)$#',
-     *     'params' => ['id', 'slug']
-     *   ]
+     *   /users/{id:\d+}/posts → #^/users/(\d+)/posts$#
      *
-     * @param  string $path The route path (e.g. '/users/{id:\d+}')
-     * @return array        Associative array with 'regex' and 'params' keys
+     * @return array{ regex: string, params: string[] }
      */
     private function compileRoute(string $path): array
     {
         $paramNames = [];
 
-        $regex = preg_replace_callback(
-            '/\{(\w+)(?::([^}]+))?\}/',
-            function (array $matches) use (&$paramNames): string {
-                // Capture the parameter name (e.g. 'id', 'slug')
-                $paramNames[] = $matches[1];
+        // Split the path into alternating static and dynamic segments.
+        $segments = preg_split('/(\{[^}]+\})/', $path, -1, PREG_SPLIT_DELIM_CAPTURE);
 
-                // Use the custom pattern if provided, otherwise match any non-slash value
-                $pattern = $matches[2] ?? '[^/]+';
+        $regexParts = array_map(function (string $segment) use (&$paramNames): string {
 
+            // Dynamic segment: extract the param name and optional pattern.
+            if (preg_match('/^\{(\w+)(?::([^}]+))?\}$/', $segment, $m))
+            {
+                $paramNames[] = $m[1];
+                $pattern      = $m[2] ?? '[^/]+';
                 return '(' . $pattern . ')';
-            },
-            $path
-        );
+            }
 
-        // Wrap the pattern into a full anchored regex
-        $regex = '#^' . $regex . '$#';
+            // Static segment: escape regex metacharacters.
+            return preg_quote($segment, '#');
+
+        }, $segments);
+
+        $regex = '#^' . implode('', $regexParts) . '$#';
 
         return ['regex' => $regex, 'params' => $paramNames];
     }
 
     /**
-     * Attempts to match an incoming URI against a registered route.
+     * Attempts to match an incoming URI against a given route.
      *
-     * If the URI matches the route's compiled regex, returns an associative
-     * array of extracted route parameters (e.g. ['id' => '42', 'slug' => 'hello']).
-     * Returns null if the URI does not match the route.
+     * Returns an associative array of extracted path parameters on match,
+     * an empty array if the route has no parameters, or null if no match.
      *
-     * @param  Route  $route The route to match against
-     * @param  string $uri   The incoming request URI path
-     * @return array|null    Matched params as key-value pairs, or null on no match
+     * @return array<string, string>|null
      */
     private function matchRoute(Route $route, string $uri): ?array
     {
         ['regex' => $regex, 'params' => $paramNames] = $this->compileRoute($route->path);
 
-        if (!preg_match($regex, $uri, $matches)) {
+        if (!preg_match($regex, $uri, $matches))
             return null;
-        }
 
-        // Remove the full match (index 0), keep only the capture groups
+        // Drop the full match, keeping only capture groups.
         array_shift($matches);
 
-        // Map capture group values to their corresponding parameter names
+        if (empty($paramNames))
+            return [];
+
+        if (count($paramNames) !== count($matches))
+            return null;
+
         return array_combine($paramNames, $matches);
     }
 
     /**
-     * Starts listening for the incoming HTTP request and dispatches it.
+     * Starts listening for the current HTTP request and dispatches it.
      *
-     * - Extracts the request URI path and HTTP method from the server globals
-     * - Returns 404 if no routes are registered for the given method
-     * - Iterates over registered routes for that method and attempts to match
-     * - Dispatches the first matching route by calling its run() method
-     * - Returns 404 if no route matches the incoming URI
+     * Normalizes the request URI (strips trailing slashes, preserves root)
+     * and matches it against registered routes by HTTP method. Runs the first
+     * matching route, or responds with 404 if none is found.
      */
     public function listen(): void
     {
-        $uri    = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
-        $method = $_SERVER['REQUEST_METHOD'];
+        $rawUri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 
-        // No routes registered for this HTTP method
-        if (empty($this->routes[$method])) {
+        // Normalize trailing slashes to match how routes are stored in addRoute().
+        $uri    = $rawUri !== '/' ? rtrim($rawUri, '/') : '/';
+        $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+
+        if (empty($this->routes[$method]))
+        {
             Response::notFound(['message' => 'Route not found.']);
             return;
         }
 
-        // Try to match the URI against each registered route for this method
-        foreach ($this->routes[$method] as $route) {
+        foreach ($this->routes[$method] as $route)
+        {
             $params = $this->matchRoute($route, $uri);
 
-            if ($params !== null) {
-                // Match found — dispatch the route with the extracted params
+            if ($params !== null)
+            {
                 $route->run($params);
                 return;
             }
         }
 
-        // No matching route found
         Response::notFound(['message' => 'Route not found.']);
     }
 }
