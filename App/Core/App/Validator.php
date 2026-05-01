@@ -108,17 +108,17 @@ class Validator
      * @param  ?string $value Raw input value to validate
      * @return ?bool          True, false, or null if empty
      */
-    public static function bool(string $label, ?string $value): ?bool
+    public static function bool(string $label, mixed $value): ?bool
     {
-        if (empty($value))
+        if (in_array($value, [true, false]))
+            return $value;
+        
+        if ($value === null)
             return null;
 
-        $value     = strtolower($value);
+        $value     = strtolower((string) $value);
         $trueVals  = ['true', '1', 'yes', 'high'];
         $falseVals = ['false', '0', 'no', 'low'];
-
-        if (!in_array($value, $trueVals) && !in_array($value, $falseVals))
-            Response::unprocessableEntity(['message' => $label . ' should be a boolean-like value.']);
 
         if (in_array($value, $trueVals))
             return true;
@@ -306,7 +306,7 @@ class Validator
      * @param  ?string $value Raw input value to validate
      * @return bool           Validated boolean
      */
-    public static function requiredBool(string $label, ?string $value): bool
+    public static function requiredBool(string $label, mixed $value): bool
     {
         if ($value === null)
             Response::unprocessableEntity(['message' => $label . ' is required.']);
