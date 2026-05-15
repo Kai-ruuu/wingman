@@ -4,6 +4,7 @@ namespace Wingman\Core\CLI;
 
 use Wingman\Config\Globals;
 use Wingman\Config\Models;
+use Wingman\Config\PrivateGlobals;
 use Wingman\Config\Seeders;
 use Wingman\Core\App\Database;
 use Wingman\Core\App\DatabaseConfig;
@@ -460,7 +461,7 @@ class Command
 
         if ($seedAll)
         {
-            $dbConfig = DatabaseConfig::fromDefault();
+            $dbConfig = PrivateGlobals::getDatabaseConfig();
             $database = Database::fromConfig($dbConfig);
             Seeders::withDatabase($database)->seedAll();
             return;
@@ -476,7 +477,7 @@ class Command
 
         // Ensure the class name ends with 'Seeder'
         $name        = !str_ends_with($name, 'Seeder') ? $name . 'Seeder' : $name;
-        $dbConfig    = DatabaseConfig::fromDefault();
+        $dbConfig    = PrivateGlobals::getDatabaseConfig();
         $database    = Database::fromConfig($dbConfig);
         $seederClass = "Wingman\\Seeders\\" . $name;
 
@@ -515,7 +516,7 @@ class Command
 
         if ($buildAll)
         {
-            $dbConfig = DatabaseConfig::fromDefault();
+            $dbConfig = PrivateGlobals::getDatabaseConfig();
             $database = Database::fromConfig($dbConfig);
             Models::withDatabase($database)->buildAll($showSchema);
             return;
@@ -531,7 +532,7 @@ class Command
 
         // Ensure the class name ends with 'Model'
         $modelName  = !str_ends_with($modelName, 'Model') ? $modelName . 'Model' : $modelName;
-        $dbConfig   = DatabaseConfig::fromDefault();
+        $dbConfig   = PrivateGlobals::getDatabaseConfig();
         $database   = Database::fromConfig($dbConfig);
         $modelClass = "Wingman\\Models\\" . $modelName;
 
@@ -567,7 +568,7 @@ class Command
 
         if ($demolishAll)
         {
-            $dbConfig = DatabaseConfig::fromDefault();
+            $dbConfig = PrivateGlobals::getDatabaseConfig();
             $database = Database::fromConfig($dbConfig);
             Models::withDatabase($database)->demolishAll();
             return;
@@ -583,7 +584,7 @@ class Command
 
         // Ensure the class name ends with 'Model'
         $modelName  = !str_ends_with($modelName, 'Model') ? $modelName . 'Model' : $modelName;
-        $dbConfig   = DatabaseConfig::fromDefault();
+        $dbConfig   = PrivateGlobals::getDatabaseConfig();
         $database   = Database::fromConfig($dbConfig);
         $modelClass = "Wingman\\Models\\" . $modelName;
 
