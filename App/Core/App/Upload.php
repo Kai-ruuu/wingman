@@ -312,6 +312,9 @@ class Upload
      */
     public function commit(): void
     {
+        if (!$this->tempFileDir || !$this->tempFileName)
+            return;
+        
         $fullFileDir = Globals::getConcatDir('APP_UPLOADS', $this->destination);
         if (!is_dir($fullFileDir))
             mkdir($fullFileDir, 0777, true);
