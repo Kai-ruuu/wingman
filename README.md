@@ -1,6 +1,6 @@
 # Wingman
 
-**Wingman** is a lightweight PHP REST API framework built for developers who want full control without the overhead of a full-stack framework. It gives you the essential building blocks — routing, controllers, models, middleware, and a fluent query builder — in a clean, minimal package you can actually understand end to end.
+**Wingman** is a lightweight PHP REST API framework built for developers who want full control without the overhead of a full-stack framework. It gives you the essential building blocks — routing, controllers, models, middleware, a fluent query builder, and file upload handling — in a clean, minimal package you can actually understand end to end.
 
 ---
 
@@ -26,16 +26,12 @@ It's designed for building focused, fast REST APIs where you know exactly what's
 | Logging                       | ✅ Supported |
 | CORS Configuration            | ✅ Supported |
 | Rate Limiting                 | ✅ Supported |
+| File Upload Handling          | ✅ Supported |
 
 ---
 
-## Supported Databases
-
-### SQL:
+## Supported Database
 - MySQL
-
-### NoSQL:
-- None
 
 ---
 
@@ -377,6 +373,127 @@ class AuthMiddleware extends BaseMiddleware
     }
 }
 ```
+
+### File Upload Handling
+
+Wingman provides a two-phase staging and commit workflow for handling file uploads safely. Files are first moved to a temporary directory during `stage()`, then relocated to their final destination during `commit()`. If anything goes wrong at any point, `rollback()` cleans up any staged temp files automatically.
+
+#### Single File — `Upload`
+
+Use `Upload` to configure and handle a single file upload with a fluent builder API.
+
+```php
+$upload = Upload::build()
+    ->asRequired()
+    ->withLabel('Profile Photo')
+    ->withPrefix('user_123')
+    ->withFieldName('profile_photo')
+    ->withAllowedTypes(['image/png', 'image/jpeg'])
+    ->withMaxSizeMbOf(2.0)
+    ->withDestination('users/avatars');
+```
+
+| Method | Description |
+| ------ | ----------- |
+| `asRequired()` | Marks the upload as mandatory; fails if no file is provided |
+| `withLabel(string)` | Sets the human-readable label used in error messages |
+| `withFieldName(string)` | Sets the `$_FILES` key to read from |
+| `withPrefix(string)` | Prepends a string to the generated unique filename (e.g. `user_123_<uniqid>.png`) |
+| `withAllowedTypes(array)` | List of permitted MIME types; files outside this list are rejected |
+| `withMaxSizeMbOf(float)` | Maximum allowed file size in megabytes (default: `5.0`) |
+| `withDestination(string)` | Subdirectory under `Uploads/` where the file is committed |
+
+MIME type detection uses PHP's `finfo` extension on the actual file content — not the client-supplied filename or content-type header. This makes type validation reliable and spoof-resistant.
+
+#### Multiple Files — `UploadHandler`
+
+Use `UploadHandler` to orchestrate multiple `Upload` instances through the same two-phase workflow. If any upload fails at either phase, the handler captures the error and rolls back all staged files automatically.
+
+```php
+$handler = UploadHandler::build()
+    ->add(
+        Upload::build()
+            ->asRequired()
+            ->withLabel('Seed Image')
+            ->withPrefix('seed')
+            ->withFieldName('image_seed')
+            ->withAllowedTypes(['image/png', 'image/jpeg', 'image/webp'])
+            ->withMaxSizeMbOf(3.0)
+            ->withDestination('plants/seeds')
+    )
+    ->add(
+        Upload::build()
+            ->asRequired()
+            ->withLabel('Mature Image')
+            ->withPrefix('mature')
+            ->withFieldName('image_mature')
+            ->withAllowedTypes(['image/png', 'image/jpeg', 'image/webp'])
+            ->withMaxSizeMbOf(3.0)
+            ->withDestination('plants/mature')
+    );
+```
+
+#### Typical Controller Usage
+
+The recommended pattern is: stage → check → do DB work → commit → check. This ensures files are only permanently stored after all dependent operations succeed.
+
+```php
+// Stage all uploads
+$handler->stage();
+if ($handler->hasError())
+    $response::bad(['message' => $handler->getError()]);
+
+// Read generated filenames before committing (e.g. to persist to DB)
+$seedImageName   = $handler->getFileNameByFieldName('image_seed');
+$matureImageName = $handler->getFileNameByFieldName('image_mature');
+
+// Do your DB work
+$plant = (new PlantModel($this->db))->create([
+    'image_seed'   => $seedImageName,
+    'image_mature' => $matureImageName,
+]);
+
+if (!$plant)
+{
+    $handler->rollback();
+    $response::internalServerError(['message' => 'Something went wrong.']);
+}
+
+// Commit files to their final destinations
+$handler->commit();
+if ($handler->hasError())
+    $response::internalServerError(['message' => $handler->getError()]);
+
+$response::created($plant);
+```
+
+#### `UploadHandler` Methods
+
+| Method | Description |
+| ------ | ----------- |
+| `add(Upload)` | Registers an `Upload` instance to be handled |
+| `stage()` | Validates and moves all uploads to the temp directory |
+| `commit()` | Moves all staged uploads to their final destinations |
+| `rollback()` | Deletes all staged temp files; safe to call at any point |
+| `hasError()` | Returns `true` if any upload encountered an error |
+| `getError()` | Returns the first error message captured, or `null` |
+| `getFileNameByFieldName(string)` | Returns the generated filename for a given `$_FILES` key |
+
+#### Upload Directory Structure
+
+Uploads are stored under the `Uploads/` directory at the project root. Temporary files are held in `Uploads/Temp/` during staging and moved to their final subdirectory on commit.
+
+```
+Uploads/
+├── Temp/                   # Staging area; files here are transient
+├── users/
+│   └── avatars/            # e.g. withDestination('users/avatars')
+└── plants/
+    ├── seeds/
+    └── mature/
+```
+
+Destination directories are created automatically if they do not exist.
 
 ### JSON Responses
 

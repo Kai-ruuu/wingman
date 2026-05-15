@@ -26,25 +26,29 @@ class Globals
      * Registered application directories.
      *
      * These paths point to key directories used by the framework and CLI tools
-     * for scaffolding, logging, rate limiting, and more.
+     * for scaffolding, logging, rate limiting, file uploads, and more.
      *
      * Keys:
-     * - LOGS            : Where log files are written
-     * - RATE_LIMITS     : Where rate limit tracking files are stored
-     * - APP_CONTROLLERS : Where application controllers live
-     * - APP_MIDDLEWARES : Where application middlewares live
-     * - APP_ROUTERS     : Where application routers live
-     * - APP_MODELS      : Where application models live
-     * - APP_SEEDERS     : Where application seeders live
+     * - LOGS             : Where log files are written
+     * - RATE_LIMITS      : Where rate limit tracking files are stored
+     * - APP_CONTROLLERS  : Where application controllers live
+     * - APP_MIDDLEWARES  : Where application middlewares live
+     * - APP_ROUTERS      : Where application routers live
+     * - APP_MODELS       : Where application models live
+     * - APP_SEEDERS      : Where application seeders live
+     * - APP_UPLOADS      : Where uploaded files are stored
+     * - APP_UPLOADS_TEMP : Where temporary upload files are held before processing
      */
     private static array $dirs = [
-        'LOGS'            => __DIR__ . '/../../Logs',
-        'RATE_LIMITS'     => __DIR__ . '/../../Tmp/RateLimits',
-        'APP_CONTROLLERS' => __DIR__ . '/../Controllers',
-        'APP_MIDDLEWARES' => __DIR__ . '/../Middlewares',
-        'APP_ROUTERS'     => __DIR__ . '/../Routers',
-        'APP_MODELS'      => __DIR__ . '/../Models',
-        'APP_SEEDERS'     => __DIR__ . '/../Seeders',
+        'LOGS'             => __DIR__ . '/../../Logs',
+        'RATE_LIMITS'      => __DIR__ . '/../../Tmp/RateLimits',
+        'APP_CONTROLLERS'  => __DIR__ . '/../Controllers',
+        'APP_MIDDLEWARES'  => __DIR__ . '/../Middlewares',
+        'APP_ROUTERS'      => __DIR__ . '/../Routers',
+        'APP_MODELS'       => __DIR__ . '/../Models',
+        'APP_SEEDERS'      => __DIR__ . '/../Seeders',
+        'APP_UPLOADS'      => __DIR__ . '/../../Uploads',
+        'APP_UPLOADS_TEMP' => __DIR__ . '/../../Uploads/Temp',
     ];
 
     /**
@@ -61,11 +65,11 @@ class Globals
      * - KIT_SEEDER     : Stub file for generating a new seeder
      */
     private static array $paths = [
-        'KIT_CONTROLLER' => __DIR__ . '/../Core/App/Kit/SampleController.php',
-        'KIT_MIDDLEWARE' => __DIR__ . '/../Core/App/Kit/SampleMiddleware.php',
-        'KIT_ROUTER'     => __DIR__ . '/../Core/App/Kit/SampleRouter.php',
-        'KIT_MODEL'      => __DIR__ . '/../Core/App/Kit/SampleModel.php',
-        'KIT_SEEDER'     => __DIR__ . '/../Core/App/Kit/SampleSeeder.php',
+        'KIT_CONTROLLER'  => __DIR__ . '/../Core/App/Kit/SampleController.php',
+        'KIT_MIDDLEWARE'  => __DIR__ . '/../Core/App/Kit/SampleMiddleware.php',
+        'KIT_ROUTER'      => __DIR__ . '/../Core/App/Kit/SampleRouter.php',
+        'KIT_MODEL'       => __DIR__ . '/../Core/App/Kit/SampleModel.php',
+        'KIT_SEEDER'      => __DIR__ . '/../Core/App/Kit/SampleSeeder.php',
     ];
 
     /**
@@ -77,6 +81,33 @@ class Globals
     public static function getDir(string $key): ?string
     {
         return self::$dirs[$key] ?? null;
+    }
+
+    /**
+     * Retrieves a registered directory path by key and appends one or more
+     * subdirectory segments to it.
+     *
+     * Useful for resolving dynamic subdirectories beneath a registered base path
+     * without needing to register each variant explicitly.
+     *
+     * Returns null if the base directory key doesn't exist.
+     *
+     * @param  string      $key      The base directory key (e.g. 'APP_UPLOADS')
+     * @param  string      ...$dirs  One or more path segments to append
+     * @return string|null           The concatenated path, or null if the key doesn't exist
+     *
+     * @example
+     * Globals::getConcatDir('APP_UPLOADS', 'images', 'avatars');
+     * // => /path/to/Uploads/images/avatars
+     */
+    public static function getConcatDir(string $key, string ...$dirs): ?string
+    {
+        $existingDir = self::$dirs[$key] ?? null;
+
+        if (!$existingDir)
+            return null;
+
+        return $existingDir . '/' . implode('/', $dirs);
     }
 
     /**
