@@ -83,11 +83,11 @@ class BaseModel
      * Adds an INT column.
      * 
      * @param string $columnName The column name.
-     * @param string $default    Optional default value.
+     * @param ?int $default      Optional default value.
      */
-    protected function integer(string $columnName, string $default = ''): self
+    protected function integer(string $columnName, ?int $default = null): self
     {
-        $default = $default ? "DEFAULT {$default}" : '';
+        $default = $default !== null ? "DEFAULT {$default}" : '';
         $this->columns[] = rtrim("{$columnName} INT " . $default, ' ');
         return $this;
     }
@@ -96,11 +96,11 @@ class BaseModel
      * Adds a FLOAT column.
      * 
      * @param string $columnName The column name.
-     * @param string $default    Optional default value.
+     * @param ?float $default    Optional default value.
      */
-    protected function float(string $columnName, string $default = ''): self
+    protected function float(string $columnName, ?float $default = null): self
     {
-        $default = $default ? "DEFAULT {$default}" : '';
+        $default = $default !== null ? "DEFAULT " . sprintf('%F', $default) : '';
         $this->columns[] = rtrim("{$columnName} FLOAT " . $default, ' ');
         return $this;
     }
