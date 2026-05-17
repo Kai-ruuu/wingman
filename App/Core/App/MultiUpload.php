@@ -30,7 +30,7 @@ use Wingman\Core\Utils\File;
  *     ->withFieldName('images')
  *     ->withAllowedTypes(['image/jpeg', 'image/png'])
  *     ->withMaxSizeMbOf(2.0)
- *     ->withMaxFileOf(3)
+ *     ->withMaxFilesOf(3)
  *     ->withDestination('recipe-images')
  *     ->withPrefix('recipe');
  *
@@ -120,7 +120,7 @@ class MultiUpload implements Uploadable
      * @param  int $maxFiles
      * @return self
      */
-    public function withMaxFileOf(int $maxFiles): self
+    public function withMaxFilesOf(int $maxFiles): self
     {
         $this->maxFiles = $maxFiles;
         return $this;

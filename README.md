@@ -435,7 +435,7 @@ $handler = UploadHandler::build()
             ->withFieldName('images')
             ->withAllowedTypes(['image/png', 'image/jpeg', 'image/webp'])
             ->withMaxSizeMbOf(2.0)
-            ->withMaxFileOf(3)
+            ->withMaxFilesOf(3)
             ->withDestination('recipes/images')
             ->withPrefix('recipe')
     );
@@ -449,7 +449,7 @@ $handler = UploadHandler::build()
 | `withPrefix(string)` | Prepends a string to each generated unique filename (e.g. `recipe_<uniqid>.jpg`) |
 | `withAllowedTypes(array)` | List of permitted MIME types applied to every file |
 | `withMaxSizeMbOf(float)` | Maximum allowed file size in megabytes, enforced per file (default: `5.0`) |
-| `withMaxFileOf(int)` | Maximum number of files allowed in the upload (default: `3`) |
+| `withMaxFilesOf(int)` | Maximum number of files allowed in the upload (default: `3`) |
 | `withDestination(string)` | Subdirectory under `Uploads/` where the files are committed |
 
 ---
@@ -621,7 +621,7 @@ public function store(Request $request, Response $response): void
                 ->withFieldName('images')
                 ->withAllowedTypes(['image/png', 'image/jpeg', 'image/webp'])
                 ->withMaxSizeMbOf(2.0)
-                ->withMaxFileOf(3)
+                ->withMaxFilesOf(3)
                 ->withDestination('recipes/images')
                 ->withPrefix('recipe')
         );
@@ -688,7 +688,7 @@ $handler = UploadHandler::build()
             ->withFieldName('step_images')
             ->withAllowedTypes(['image/png', 'image/jpeg', 'image/webp'])
             ->withMaxSizeMbOf(2.0)
-            ->withMaxFileOf(5)
+            ->withMaxFilesOf(5)
             ->withDestination('recipes/steps')
             ->withPrefix('step')
     );
