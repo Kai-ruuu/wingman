@@ -175,9 +175,9 @@ class QueryableModel extends BaseModel
         return $result;
     }
 
-    public function paginateResult(int $page, int $perPage = 10): array
+    public function paginateResult(int $page, int $perPage = 10, array $excluding = []): array
     {
-        $result = $this->query->paginateResult($this->db, $page, $perPage);
+        $result = $this->query->paginateResult($this->db, $page, $perPage, $excluding);
         $this->fresh();
         return $result;
     }

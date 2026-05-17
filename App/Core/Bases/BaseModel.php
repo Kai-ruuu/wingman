@@ -150,11 +150,11 @@ class BaseModel
      * For automatic timestamp management, prefer createdAt() or updatedAt().
      * 
      * @param string $columnName The column name. Defaults to 'created_at'.
-     * @param string $default    Optional default value (e.g. a datetime string).
+     * @param ?string $default    Optional default value (e.g. a datetime string).
      */
-    protected function timestamp(string $columnName = 'created_at', string $default = ''): self
+    protected function timestamp(string $columnName = 'created_at', ?string $default = null): self
     {
-        $default = $default ? "DEFAULT '{$default}'" : '';
+        $default = $default !== null ? "DEFAULT '{$default}'" : '';
         $this->columns[] = rtrim("{$columnName} TIMESTAMP " . $default, ' ');
         return $this;
     }

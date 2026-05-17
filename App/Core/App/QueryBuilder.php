@@ -268,10 +268,10 @@ class QueryBuilder
         return (int) ($result['aggregate'] ?? 0);
     }
 
-    public function paginateResult(mysqli $db, int $page, int $perPage = 10): array
+    public function paginateResult(mysqli $db, int $page, int $perPage = 10, array $excluding = []): array
     {
         $total     = $this->count($db);
-        $data      = $this->paginate($page, $perPage)->get($db);
+        $data      = $this->paginate($page, $perPage)->get($db, $excluding);
         $lastPage  = (int) ceil($total / $perPage);
 
         return [
