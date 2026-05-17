@@ -2,6 +2,8 @@
 
 namespace Wingman\Core\App;
 
+use Wingman\Config\Globals;
+
 /**
  * UploadHandler
  *
@@ -63,6 +65,24 @@ class UploadHandler
     {
         $this->uploads[] = $upload;
         return $this;
+    }
+
+    /**
+     * Deletes a file from the specified upload destination if it exists.
+     *
+     * Useful for removing old files (e.g. avatars) after a successful update.
+     * Safe to call at any point — no-op if the file does not exist.
+     *
+     * @param  string $destination  The subdirectory under APP_UPLOADS (e.g. 'avatars')
+     * @param  string $filename     The filename to delete
+     * @return void
+     */
+    public function deleteIfExists(string $destination, string $filename): void
+    {
+        $filePath = Globals::getConcatDir('APP_UPLOADS', $destination, $filename);
+
+        if (file_exists($filePath))
+            unlink($filePath);
     }
 
     /**
