@@ -7,8 +7,8 @@ use Wingman\Config\Globals;
 /**
  * UploadHandler
  *
- * Orchestrates multiple Upload instances through a two-phase staging
- * and commit workflow.
+ * Orchestrates one or more Uploadable instances (Upload or MultiUpload)
+ * through a unified two-phase staging and commit workflow.
  *
  * Uploads are staged together first, then committed together only after
  * all dependent operations (e.g. database inserts) have succeeded. If any
@@ -18,8 +18,8 @@ use Wingman\Config\Globals;
  * Typical usage:
  * @example
  * $handler = UploadHandler::build()
- *     ->add(Upload::build()->asRequired()->withFieldName('image_seed')->...)
- *     ->add(Upload::build()->asRequired()->withFieldName('image_mature')->...);
+ *     ->add(Upload::build()->withFieldName('avatar')->...)
+ *     ->add(MultiUpload::build()->withFieldName('images')->...);
  *
  * $handler->stage();
  * if ($handler->hasError()) // respond with error
@@ -33,11 +33,11 @@ class UploadHandler
     /** @var string|null The first error captured from any upload during stage() or commit() */
     private ?string $error = null;
 
-    /** @var Upload[] The registered uploads to be processed */
+    /** @var Uploadable[] Registered uploads to be processed in the order they were added */
     private array $uploads = [];
 
     /**
-     * @param Upload[] $uploads
+     * Private constructor — use UploadHandler::build() to create an instance.
      */
     private function __construct(array $uploads = [])
     {
@@ -54,14 +54,15 @@ class UploadHandler
     }
 
     /**
-     * Registers an Upload instance to be handled.
+     * Registers an Uploadable instance to be handled.
      *
+     * Accepts both Upload (single file) and MultiUpload (multiple files).
      * Uploads are staged and committed in the order they are added.
      *
-     * @param  Upload $upload
+     * @param  Uploadable $upload
      * @return self
      */
-    public function add(Upload $upload): self
+    public function add(Uploadable $upload): self
     {
         $this->uploads[] = $upload;
         return $this;
@@ -135,8 +136,8 @@ class UploadHandler
     /**
      * Rolls back all registered uploads by deleting any staged temp files.
      *
-     * Safe to call at any point — each Upload's rollback() is a no-op if
-     * its file was never staged.
+     * Safe to call at any point — each upload's rollback() is a no-op if
+     * its file(s) were never staged.
      *
      * @return void
      */
@@ -149,7 +150,7 @@ class UploadHandler
     }
 
     /**
-     * Returns whether any upload has encountered an error.
+     * Returns whether any upload encountered an error during stage() or commit().
      *
      * @return bool
      */
@@ -161,7 +162,7 @@ class UploadHandler
     /**
      * Returns the first error captured from any upload during stage() or commit().
      *
-     * @return string|null The error message, or null if no error occurred
+     * @return string|null  The error message, or null if no error occurred
      */
     public function getError(): ?string
     {
@@ -171,25 +172,62 @@ class UploadHandler
     /**
      * Retrieves the generated filename for a specific upload by its field name.
      *
-     * Useful for reading back filenames after staging, typically to persist
-     * them to the database before calling commit().
+     * Behavior differs by upload type:
+     * - For Upload (single file): call without an index, or with $index = null.
+     * - For MultiUpload: pass the zero-based index of the file to retrieve.
      *
-     * Returns null if no upload is registered under the given field name,
-     * or if that upload has not yet been successfully staged.
+     * Returns null if:
+     * - The field name is not registered
+     * - An index is passed for a single Upload field
+     * - No index is passed for a MultiUpload field
+     * - The index is out of range
+     * - The file has not been staged yet
      *
-     * @param  string      $fieldName  The $_FILES key to look up (e.g. 'image_seed')
-     * @return string|null             The generated filename, or null if not found
+     * @param  string   $fieldName  The $_FILES key to look up (e.g. 'avatar')
+     * @param  int|null $index      Zero-based file index for MultiUpload fields (e.g. 0, 1, 2)
+     * @return string|null          The generated filename, or null if not found
      */
-    public function getFileNameByFieldName(string $fieldName): ?string
+    public function getFileNameByFieldName(string $fieldName, ?int $index = null): ?string
     {
         $fileName = null;
 
         foreach ($this->uploads as $upload)
         {
             if ($upload->getFieldName() === $fieldName)
-                return $upload->getFileName();
+            {
+                if ($index === null && $upload instanceof Upload)
+                    return $upload->getFileName();
+
+                if ($index !== null && $upload instanceof MultiUpload)
+                    return $upload->getFileName($index);
+            }
         }
 
         return $fileName;
+    }
+
+    /**
+     * Retrieves all generated filenames for a MultiUpload field.
+     *
+     * Useful when inserting all uploaded filenames into the database at once
+     * without needing to know the exact file count upfront.
+     *
+     * Returns an empty array if:
+     * - The field name is not registered
+     * - The field is registered as a single Upload, not a MultiUpload
+     * - No files were staged
+     *
+     * @param  string   $fieldName  The $_FILES key to look up (e.g. 'images')
+     * @return string[]             Array of generated filenames, indexed by upload order
+     */
+    public function getFileNamesByFieldName(string $fieldName): array
+    {
+        foreach ($this->uploads as $upload)
+        {
+            if ($upload->getFieldName() === $fieldName && $upload instanceof MultiUpload)
+                return $upload->getFileNames();
+        }
+
+        return [];
     }
 }

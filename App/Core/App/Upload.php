@@ -4,63 +4,76 @@ namespace Wingman\Core\App;
 
 use finfo;
 use Wingman\Config\Globals;
+use Wingman\Core\Utils\File;
 
 /**
  * Upload
  *
- * Fluent builder for handling a single file upload through a two-phase
- * staging and commit workflow.
+ * Handles a single-file upload through a two-phase staging and commit workflow.
  *
- * Files are first moved to a temporary directory during stage(), then
- * relocated to their final destination during commit(). If anything goes
- * wrong at any point, rollback() cleans up any staged temp file.
+ * The file is first validated and moved to a temporary directory (stage), then
+ * moved to its final destination (commit) only after all dependent operations
+ * (e.g. database inserts) have succeeded. If anything fails at any point,
+ * rollback() cleans up the temp file.
+ *
+ * Implements the Uploadable interface so it can be managed uniformly by
+ * UploadHandler alongside MultiUpload instances.
  *
  * Typical usage:
  * @example
- * Upload::build()
- *     ->asRequired()
- *     ->withLabel('Profile Photo')
- *     ->withPrefix('user_123')
- *     ->withFieldName('profile_photo')
- *     ->withAllowedTypes(['image/png', 'image/jpeg'])
+ * $upload = Upload::build()
+ *     ->withLabel('Avatar')
+ *     ->withFieldName('avatar')
+ *     ->withAllowedTypes(['image/jpeg', 'image/png'])
  *     ->withMaxSizeMbOf(2.0)
- *     ->withDestination('users/avatars');
+ *     ->withDestination('avatars')
+ *     ->withPrefix('avatar');
+ *
+ * $upload->stage();
+ * if ($upload->hasError()) // respond with error
+ *
+ * // do your DB work, then:
+ * $upload->commit();
+ * if ($upload->hasError()) // respond with error
  */
-class Upload
+class Upload implements Uploadable
 {
-    /** @var string Human-readable label used in error messages (e.g. 'Profile Photo') */
+    /** @var string Human-readable label used in error messages (e.g. 'Avatar') */
     private string $label;
 
-    /** @var string|null The $_FILES field name this upload reads from */
+    /** @var string|null The $_FILES key this upload reads from (e.g. 'avatar') */
     private ?string $fieldName = null;
 
-    /** @var string[] List of permitted MIME types (e.g. ['image/png', 'image/jpeg']) */
+    /** @var string[] Allowed MIME types (e.g. ['image/jpeg', 'image/png']) */
     private array $allowedTypes = [];
 
-    /** @var float Maximum allowed file size in megabytes */
+    /** @var float Maximum allowed file size in megabytes. Defaults to 5.0 MB. */
     private float $maxSizeMb = 5.0;
 
-    /** @var bool Whether the upload is mandatory; triggers a validation error if no file is provided */
+    /** @var bool Whether the file is required. Optional uploads are skipped if absent. */
     private bool $required = false;
 
-    /** @var string Subdirectory under APP_UPLOADS where the file will be committed */
+    /** @var string Subdirectory under APP_UPLOADS where the file will be committed (e.g. 'avatars') */
     private string $destination;
 
-    /** @var string Optional filename prefix applied before the unique ID (e.g. 'sunflower_seed') */
+    /** @var string Optional prefix prepended to the generated filename (e.g. 'avatar') */
     private string $prefix = '';
 
-    /** @var string|null Validation or upload error set during stage() */
+    /** @var string|null Error message captured during stage(), or null if no error */
     private ?string $error = null;
 
-    /** @var string|null Error set during commit() */
+    /** @var string|null Error message captured during commit(), or null if no error */
     private ?string $commitError = null;
 
-    /** @var string|null Absolute path to the temp directory where the file is staged */
+    /** @var string|null Absolute path to the temp directory used during staging */
     private ?string $tempFileDir = null;
 
-    /** @var string|null Generated filename used in both the temp and final locations */
+    /** @var string|null Generated filename used for both the temp and final file paths */
     private ?string $tempFileName = null;
 
+    /**
+     * Private constructor — use Upload::build() to create an instance.
+     */
     private function __construct()
     {
     }
@@ -76,9 +89,12 @@ class Upload
     }
 
     /**
-     * Sets the filename prefix prepended to the generated unique ID.
+     * Sets the prefix prepended to the generated filename.
      *
-     * @param  string $prefix  e.g. 'sunflower_seed' produces 'sunflower_seed_<uniqid>.png'
+     * Useful for grouping files by type in the filesystem
+     * (e.g. 'avatar' produces filenames like 'avatar_abc123.jpg').
+     *
+     * @param  string $prefix
      * @return self
      */
     public function withPrefix(string $prefix): self
@@ -88,9 +104,9 @@ class Upload
     }
 
     /**
-     * Sets the human-readable label used in validation and error messages.
+     * Sets the human-readable label used in error messages.
      *
-     * @param  string $label  e.g. 'Profile Photo'
+     * @param  string $label  (e.g. 'Avatar', 'Profile Photo')
      * @return self
      */
     public function withLabel(string $label): self
@@ -102,7 +118,9 @@ class Upload
     /**
      * Sets the $_FILES key this upload reads from.
      *
-     * @param  string $fieldName  The HTML input name attribute (e.g. 'image_seed')
+     * Must match the `name` attribute of the file input in the form.
+     *
+     * @param  string $fieldName  (e.g. 'avatar')
      * @return self
      */
     public function withFieldName(string $fieldName): self
@@ -112,10 +130,12 @@ class Upload
     }
 
     /**
-     * Sets the list of permitted MIME types.
-     * Files with a detected MIME type not in this list will be rejected.
+     * Sets the allowed MIME types for this upload.
      *
-     * @param  string[] $allowedTypes  e.g. ['image/png', 'image/jpeg']
+     * MIME type is determined from the actual file content using finfo,
+     * not from the client-supplied filename or Content-Type header.
+     *
+     * @param  string[] $allowedTypes  (e.g. ['image/jpeg', 'image/png'])
      * @return self
      */
     public function withAllowedTypes(array $allowedTypes = []): self
@@ -127,7 +147,9 @@ class Upload
     /**
      * Sets the maximum allowed file size in megabytes.
      *
-     * @param  float $maxSizeMb  Defaults to 5.0 MB
+     * Defaults to 5.0 MB if not set.
+     *
+     * @param  float $maxSizeMb
      * @return self
      */
     public function withMaxSizeMbOf(float $maxSizeMb = 5.0): self
@@ -137,10 +159,11 @@ class Upload
     }
 
     /**
-     * Sets the destination subdirectory under APP_UPLOADS where the file
-     * will be moved on commit().
+     * Sets the destination subdirectory under APP_UPLOADS.
      *
-     * @param  string $destination  e.g. 'release-plants' resolves to Uploads/release-plants/
+     * The directory is created automatically during commit() if it does not exist.
+     *
+     * @param  string $destination  (e.g. 'avatars', 'recipe-images')
      * @return self
      */
     public function withDestination(string $destination): self
@@ -151,7 +174,9 @@ class Upload
 
     /**
      * Marks this upload as required.
-     * If no file is provided during stage(), an error will be set.
+     *
+     * If the file is absent, stage() captures an error and processing stops.
+     * By default, uploads are optional — absent files are silently skipped.
      *
      * @return self
      */
@@ -162,89 +187,19 @@ class Upload
     }
 
     /**
-     * Resolves a file extension from a MIME type.
-     * Falls back to 'bin' for any unrecognized MIME type.
+     * Validates the incoming file and moves it to a temporary directory.
      *
-     * @param  string $mime  A MIME type string (e.g. 'image/png')
-     * @return string        The corresponding file extension (e.g. 'png')
-     */
-    private static function getExtension(string $mime): string
-    {
-        return match ($mime)
-        {
-            // images
-            'image/jpeg' => 'jpg',
-            'image/png' => 'png',
-            'image/webp' => 'webp',
-            'image/gif' => 'gif',
-            'image/svg+xml' => 'svg',
-            'image/bmp' => 'bmp',
-            'image/x-icon' => 'ico',
-            'image/tiff' => 'tiff',
-            'image/avif' => 'avif',
-
-            // documents
-            'application/pdf' => 'pdf',
-            'text/plain' => 'txt',
-            'text/csv' => 'csv',
-            'text/html' => 'html',
-            'application/json' => 'json',
-            'application/xml' => 'xml',
-
-            // microsoft office
-            'application/msword' => 'doc',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
-
-            'application/vnd.ms-excel' => 'xls',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
-
-            'application/vnd.ms-powerpoint' => 'ppt',
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
-
-            // archives
-            'application/zip' => 'zip',
-            'application/x-rar-compressed' => 'rar',
-            'application/x-7z-compressed' => '7z',
-            'application/gzip' => 'gz',
-            'application/x-tar' => 'tar',
-
-            // audio
-            'audio/mpeg' => 'mp3',
-            'audio/wav' => 'wav',
-            'audio/ogg' => 'ogg',
-            'audio/flac' => 'flac',
-            'audio/aac' => 'aac',
-
-            // video
-            'video/mp4' => 'mp4',
-            'video/x-msvideo' => 'avi',
-            'video/x-matroska' => 'mkv',
-            'video/webm' => 'webm',
-            'video/quicktime' => 'mov',
-
-            // code
-            'text/x-php' => 'php',
-            'application/x-httpd-php' => 'php',
-            'text/javascript' => 'js',
-            'application/javascript' => 'js',
-            'text/css' => 'css',
-
-            default => 'bin'
-        };
-    }
-
-    /**
-     * Validates and moves the uploaded file to the temporary staging directory.
+     * Performs the following checks in order:
+     * - Skips silently if not required and no file was uploaded
+     * - Captures an error if required but no file was uploaded
+     * - Captures an error if PHP reported an upload error
+     * - Validates MIME type against the allowed types list
+     * - Validates file size against the maximum allowed size
      *
-     * Runs the following checks in order:
-     * - Skips silently if the upload is optional and no file was provided
-     * - Sets an error if the upload is required and no file was provided
-     * - Sets an error if PHP reported an upload error
-     * - Sets an error if the detected MIME type is not in the allowed types list
-     * - Sets an error if the file size exceeds the configured maximum
+     * On success, the file is moved to the temp directory and the generated
+     * filename is stored for use in commit() and getFileName().
      *
-     * On success, the file is moved from PHP's tmp dir into APP_UPLOADS_TEMP
-     * under a generated unique filename. Check hasError() after calling this.
+     * Check hasError() after calling this.
      *
      * @return void
      */
@@ -286,7 +241,7 @@ class Upload
         if (!is_dir($this->tempFileDir))
             mkdir($this->tempFileDir, 0777, true);
 
-        $extension = self::getExtension($mime);
+        $extension = File::getExtension($mime);
         $this->tempFileName = uniqid($this->prefix ? $this->prefix . '_' : '', true) . '.' . $extension;
         $tempFilePath = $this->tempFileDir . '/' . $this->tempFileName;
 
@@ -301,11 +256,10 @@ class Upload
     /**
      * Moves the staged file from the temp directory to its final destination.
      *
-     * Should only be called after stage() has succeeded and any dependent
-     * operations (e.g. database inserts) have also succeeded. The destination
-     * directory is created automatically if it does not exist.
+     * Should only be called after stage() has succeeded and all dependent
+     * operations (e.g. database inserts) have also succeeded.
      *
-     * Sets a commit error if the temp file is missing or cannot be moved.
+     * No-op if no file was staged (e.g. optional upload with no file provided).
      * Check hasError() after calling this.
      *
      * @return void
@@ -314,7 +268,7 @@ class Upload
     {
         if (!$this->tempFileDir || !$this->tempFileName)
             return;
-        
+
         $fullFileDir = Globals::getConcatDir('APP_UPLOADS', $this->destination);
         if (!is_dir($fullFileDir))
             mkdir($fullFileDir, 0777, true);
@@ -338,9 +292,7 @@ class Upload
     /**
      * Deletes the staged temp file if it exists.
      *
-     * Safe to call even if stage() never completed — returns early if no
-     * temp path was recorded, preventing unlink() from being called on an
-     * invalid path.
+     * Safe to call at any point — no-op if no file was staged.
      *
      * @return void
      */
@@ -355,9 +307,9 @@ class Upload
     }
 
     /**
-     * Returns the first error encountered, prioritizing stage errors over commit errors.
+     * Returns the first error captured during stage() or commit().
      *
-     * @return string|null The error message, or null if no error occurred
+     * @return string|null  The error message, or null if no error occurred
      */
     public function getError(): ?string
     {
@@ -365,7 +317,7 @@ class Upload
     }
 
     /**
-     * Returns whether this upload has encountered any error.
+     * Returns whether an error occurred during stage() or commit().
      *
      * @return bool
      */
@@ -375,7 +327,9 @@ class Upload
     }
 
     /**
-     * Returns the $_FILES field name this upload is bound to.
+     * Returns the $_FILES field name this upload is registered under.
+     *
+     * Used by UploadHandler to look up uploads by field name.
      *
      * @return string|null
      */
@@ -385,10 +339,12 @@ class Upload
     }
 
     /**
-     * Returns the generated filename used in both the temp and final locations.
-     * Returns null if stage() has not yet successfully run.
+     * Returns the generated filename after a successful stage().
      *
-     * @return string|null  e.g. 'sunflower_seed_6a0717c6d96a72.54023881.png'
+     * The filename is the same for both the temp and final file paths.
+     * Returns null if the file has not been staged yet.
+     *
+     * @return string|null  The generated filename (e.g. 'avatar_abc123.jpg'), or null
      */
     public function getFileName(): ?string
     {
